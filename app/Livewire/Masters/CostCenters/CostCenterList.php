@@ -1,94 +1,104 @@
 <?php
-// app/Livewire/Masters/CostCenters/CostCenterList.php
+// app/Livewire/Masters/CostCenter/Index.php
 
 namespace App\Livewire\Masters\CostCenters;
 
 use App\Models\CostCenter;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
-use Livewire\WithoutUrlPagination;
 
+/**
+ * Cost Center Management Component
+ *
+ * Manages Cost Centers with full CRUD operations
+ * Following the exact same pattern as UOM
+ */
 class CostCenterList extends Component
 {
-    use WithPagination, WithoutUrlPagination;
+    use WithPagination;
 
-    // Public properties
+    // Search & Filters
     public $search = '';
-    public $statusFilter = '';
+    public $statusFilter = ''; // all, active, inactive
+    public $perPage = 10;
+
+    // Sorting
     public $sortField = 'code';
     public $sortDirection = 'asc';
-    public $perPage = 5;
 
-    // Modal properties
+    // Modal State
     public $showModal = false;
-    public $editMode = false;
+    public $modalMode = 'create'; // create or edit
     public $costCenterId = null;
 
-    // Form properties
+    // Form Fields
     public $code = '';
     public $name = '';
     public $description = '';
     public $is_active = true;
 
-    // Selection properties
+    // Delete Confirmation
+    public $showDeleteModal = false;
+    public $costCenterToDelete = null;
+
+    // View Modal
+    public $showViewModal = false;
+    public $costCenterToView = null;
+
+    // Bulk Selection
     public $selectedItems = [];
     public $selectAll = false;
 
-    // View offcanvas
-    public $showOffcanvas = false;
-    public $viewCostCenter = null;
-
-    // Delete confirmation
-    public $deleteId = null;
-    public $showDeleteModal = false;
+    protected $queryString = [
+        'search' => ['except' => ''],
+        'statusFilter' => ['except' => ''],
+    ];
 
     protected $paginationTheme = 'bootstrap';
 
     /**
-     * Validation rules
+     * Validation Rules
      */
-    public function rules()
+    protected function rules()
     {
+        $costCenterId = $this->costCenterId;
+
         return [
-            'code' => 'required|string|max:50|unique:cost_centers,code,' . $this->costCenterId,
+            'code' => "required|string|max:50|unique:cost_centers,code,{$costCenterId}",
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string|max:1000',
+            'description' => 'nullable|string|max:500',
             'is_active' => 'boolean',
         ];
     }
 
+    protected $validationAttributes = [
+        'code' => 'code',
+        'name' => 'name',
+        'description' => 'description',
+    ];
+
+    protected $messages = [
+        'code.required' => 'The code field is required.',
+        'code.unique' => 'This code already exists.',
+        'name.required' => 'The name field is required.',
+    ];
+
     /**
      * Reset pagination when search changes
      */
-    public function updatedSearch()
+    public function updatingSearch()
     {
         $this->resetPage();
     }
 
-    public function updatedStatusFilter()
+    public function updatingStatusFilter()
     {
         $this->resetPage();
     }
 
     /**
-     * Reset pagination when per page changes
-     */
-    public function updatedPerPage()
-    {
-        $this->resetPage();
-    }
-
-    public function updatedSelectAll($value)
-    {
-        if ($value) {
-            $this->selectedItems = $this->getCostCentersProperty()->pluck('id')->map(fn($id) => (string) $id)->toArray();
-        } else {
-            $this->selectedItems = [];
-        }
-    }
-
-        /**
-     * Sort by field
+     * Sort by column
      */
     public function sortBy($field)
     {
@@ -100,24 +110,24 @@ class CostCenterList extends Component
         }
     }
 
-    public function openModal()
+    /**
+     * Open Create Modal
+     */
+    public function create()
     {
         $this->resetForm();
-        $this->editMode = false;
+        $this->modalMode = 'create';
         $this->showModal = true;
+        $this->dispatch('openModal', modalId: 'costCenterModal');
     }
 
-    public function closeModal()
-    {
-        $this->showModal = false;
-        $this->resetForm();
-    }
-
-        public function edit($id)
+    /**
+     * Open Edit Modal
+     */
+    public function edit($id)
     {
         $this->resetForm();
         $costCenter = CostCenter::findOrFail($id);
-
 
         $this->costCenterId = $costCenter->id;
         $this->code = $costCenter->code;
@@ -125,180 +135,236 @@ class CostCenterList extends Component
         $this->description = $costCenter->description;
         $this->is_active = $costCenter->is_active;
 
-        $this->editMode = true;
+        $this->modalMode = 'edit';
         $this->showModal = true;
-    }
-
-    public function view($id)
-    {
-        $this->viewCostCenter = costCenter::with(['creator', 'updater', 'ticketTransactions'])->findOrFail($id);
-        $this->showOffcanvas = true;
-    }
-
-    public function closeOffcanvas()
-    {
-        $this->showOffcanvas = false;
-        $this->viewCostCenter = null;
-    }
-
-    public function confirmDelete($id)
-    {
-        $this->deleteId = $id;
-        $this->showDeleteModal = true;
-    }
-
-    public function cancelDelete()
-    {
-        $this->deleteId = null;
-        $this->showDeleteModal = false;
+        $this->dispatch('openModal', modalId: 'costCenterModal');
     }
 
     /**
-     * Save cost center
+     * Save Cost Center (Create or Update)
      */
     public function save()
     {
         $this->validate();
 
         try {
-            $data = [
-                'code' => strtoupper($this->code),
-                'name' => $this->name,
-                'description' => $this->description,
-                'is_active' => $this->is_active,
-            ];
+            // Convert code to uppercase
+            $this->code = strtoupper($this->code);
 
-            if ($this->editMode) {
-                $costCenter = CostCenter::findOrFail($this->CostCenterId);
-                $data['updated_by'] = auth()->id();
-                $costCenter->update($data);
+            if ($this->modalMode === 'create') {
+                CostCenter::create([
+                    'code' => $this->code,
+                    'name' => $this->name,
+                    'description' => $this->description,
+                    'is_active' => $this->is_active,
+                    'created_by' => Auth::id(),
+                ]);
 
-                $this->dispatch('toast', type: 'success', message: 'Cost Center updated successfully!');
+                $message = 'Cost Center created successfully.';
             } else {
-                $data['created_by'] = auth()->id();
-                CostCenter::create($data);
+                $costCenter = CostCenter::findOrFail($this->costCenterId);
+                $costCenter->update([
+                    'code' => $this->code,
+                    'name' => $this->name,
+                    'description' => $this->description,
+                    'is_active' => $this->is_active,
+                    'updated_by' => Auth::id(),
+                ]);
 
-                $this->dispatch('toast', type: 'success', message: 'Cost Center created successfully!');
+                $message = 'Cost Center updated successfully.';
             }
 
-            $this->closeModal();
+            $this->showModal = false;
+            $this->resetForm();
+            $this->dispatch('closeModal', modalId: 'costCenterModal');
+            $this->dispatch('showToast', type: 'success', message: $message);
 
         } catch (\Exception $e) {
-            $this->dispatch('toast', type: 'error', message: 'An error occurred: ' . $e->getMessage());
+            $this->dispatch('showToast', type: 'error', message: 'Error: ' . $e->getMessage());
         }
     }
 
-    public function delete($id = null)
+    /**
+     * Confirm Delete
+     */
+    public function confirmDelete($id)
     {
-        $id = $id ?? $this->deleteId;
+        $this->costCenterToDelete = $id;
+        $this->showDeleteModal = true;
+        $this->dispatch('openModal', modalId: 'deleteModal');
+    }
 
-        if (!$id) {
-            return;
-        }
-
+    /**
+     * Delete Cost Center
+     */
+    public function delete()
+    {
         try {
-            $CostCenter = CostCenter::findOrFail($id);
+            $costCenter = CostCenter::findOrFail($this->costCenterToDelete);
 
-            // Check if Cost Center is being used
-            $usageCount = $costCenter->ticketTransactions()->count();
-
-            if ($usageCount > 0) {
-                $this->dispatch('toast', type: 'error', message: "Cannot delete Cost Center. It is being used in {$usageCount} ticket transaction(s).");
-                $this->cancelDelete();
+            // Check if cost center is being used in tickets
+            if ($costCenter->ticketMasters()->exists() || $costCenter->fuelSales()->exists()) {
+                $this->dispatch('showToast', type: 'error', message: 'Cannot delete Cost Center. It is being used in tickets.');
                 return;
             }
 
-            $CostCenter->delete();
-            $this->dispatch('toast', type: 'success', message: 'Cost Center deleted successfully!');
-            $this->cancelDelete();
+            $costCenter->delete();
+
+            $this->showDeleteModal = false;
+            $this->costCenterToDelete = null;
+            $this->dispatch('closeModal', modalId: 'deleteModal');
+            $this->dispatch('showToast', type: 'success', message: 'Cost Center deleted successfully.');
 
         } catch (\Exception $e) {
-            $this->dispatch('toast', type: 'error', message: 'An error occurred: ' . $e->getMessage());
-            $this->cancelDelete();
+            $this->dispatch('showToast', type: 'error', message: 'Error: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Cancel Delete
+     */
+    public function cancelDelete()
+    {
+        $this->showDeleteModal = false;
+        $this->costCenterToDelete = null;
+        $this->dispatch('closeModal', modalId: 'deleteModal');
+    }
+
+    /**
+     * View Cost Center Details
+     */
+    public function view($id)
+    {
+        $this->costCenterToView = CostCenter::with(['createdBy', 'updatedBy'])->findOrFail($id);
+        $this->showViewModal = true;
+        $this->dispatch('openModal', modalId: 'viewModal');
+    }
+
+    /**
+     * Edit from View Modal
+     */
+    public function editFromView()
+    {
+        if ($this->costCenterToView) {
+            $this->dispatch('closeModal', modalId: 'viewModal');
+            $this->edit($this->costCenterToView->id);
+        }
+    }
+
+    /**
+     * Close View Modal
+     */
+    public function closeView()
+    {
+        $this->showViewModal = false;
+        $this->costCenterToView = null;
+        $this->dispatch('closeModal', modalId: 'viewModal');
+    }
+
+    /**
+     * Toggle Select All
+     */
+    public function updatedSelectAll($value)
+    {
+        if ($value) {
+            $this->selectedItems = $this->getCostCenters()->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        } else {
+            $this->selectedItems = [];
+        }
+    }
+
+    /**
+     * Delete Selected Items
+     */
     public function deleteSelected()
     {
         if (empty($this->selectedItems)) {
-            $this->dispatch('toast', type: 'warning', message: 'No items selected.');
+            $this->dispatch('showToast', type: 'error', message: 'No items selected.');
             return;
         }
 
         try {
-            // Check if any selected Cost Center is being used
-            $usedCostCenters = CostCenter::whereIn('id', $this->selectedItems)
-                ->withCount('ticketTransactions')
-                ->get()
-                ->filter(fn($CostCenter) => $CostCenter->ticket_transactions_count > 0);
+            // Check if any selected cost centers are being used
+            $usedCount = CostCenter::whereIn('id', $this->selectedItems)
+                ->whereHas('ticketMasters')
+                ->orWhereHas('fuelSales')
+                ->count();
 
-            if ($usedCostCenters->count() > 0) {
-                $this->dispatch('toast', type: 'error', message: 'Some Cost Centers cannot be deleted as they are being used in transactions.');
+            if ($usedCount > 0) {
+                $this->dispatch('showToast', type: 'error', message: "Cannot delete {$usedCount} cost center(s). They are being used in tickets.");
                 return;
             }
 
             CostCenter::whereIn('id', $this->selectedItems)->delete();
             $this->selectedItems = [];
             $this->selectAll = false;
-
-            $this->dispatch('toast', type: 'success', message: 'Selected Cost Centers deleted successfully!');
-
+            $this->dispatch('showToast', type: 'success', message: 'Selected cost centers deleted successfully.');
         } catch (\Exception $e) {
-            $this->dispatch('toast', type: 'error', message: 'An error occurred: ' . $e->getMessage());
+            $this->dispatch('showToast', type: 'error', message: 'Error: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Close Modal
+     */
+    public function closeModal()
+    {
+        $this->showModal = false;
+        $this->resetForm();
+        $this->dispatch('closeModal', modalId: 'costCenterModal');
+    }
+
+    /**
+     * Reset Form
+     */
     private function resetForm()
     {
-        $this->CostCenterId = null;
+        $this->costCenterId = null;
         $this->code = '';
         $this->name = '';
         $this->description = '';
         $this->is_active = true;
-        $this->resetValidation();
+        $this->resetErrorBag();
     }
 
-    public function getCostCentersProperty()
+    /**
+     * Get Cost Centers Query
+     */
+    private function getCostCenters()
     {
-        return CostCenter::query()
-            ->when($this->search, function ($query) {
-                $query->where(function ($q) {
-                    $q->where('code', 'like', '%' . $this->search . '%')
-                      ->orWhere('name', 'like', '%' . $this->search . '%');
-                });
-            })
-            ->when($this->statusFilter !== '', function ($query) {
-                $isActive = $this->statusFilter === 'Active';
-                $query->where('is_active', $isActive);
-            })
-            ->withCount('ticketTransactions')
-            ->orderBy($this->sortField, $this->sortDirection)
-            ->paginate($this->perPage);
+        $query = CostCenter::query();
+
+        // Search
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('code', 'like', '%' . $this->search . '%')
+                  ->orWhere('name', 'like', '%' . $this->search . '%')
+                  ->orWhere('description', 'like', '%' . $this->search . '%');
+            });
+        }
+
+        // Status Filter
+        if ($this->statusFilter === 'active') {
+            $query->where('is_active', true);
+        } elseif ($this->statusFilter === 'inactive') {
+            $query->where('is_active', false);
+        }
+
+        // Sorting
+        $query->orderBy($this->sortField, $this->sortDirection);
+
+        return $query;
     }
 
+    /**
+     * Render Component
+     */
     public function render()
     {
-        $CostCenters = $this->getCostCentersProperty();
+        $costCenters = $this->getCostCenters()->paginate($this->perPage);
 
-        $stats = [
-            'total' => CostCenter::count(),
-            'active' => CostCenter::where('is_active', true)->count(),
-            'inactive' => CostCenter::where('is_active', false)->count(),
-        ];
-
-        return view('livewire.masters.cost-centers.cost-center-list', [
-            'CostCenters' => $CostCenters,
-            'stats' => $stats,
-            'title' => 'Cost Center Management',
-        ]);
-        // ])->layout('admin.layout', ['title' => 'Cost Center Management']);
-
-    // public function render()
-    // {
-    //     return view('livewire.masters.cost-centers.cost-center-list', [
-    //         'costCenters' => $this->getQuery()->paginate($this->perPage),
-    //     ]);
-    // }
+        return view('livewire.masters.cost-center.index', [
+            'costCenters' => $costCenters,
+        ])->layout('admin.layout');
     }
-
 }

@@ -77,13 +77,13 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
         // Cost Centers
 
-        // Route::get('/cost-center', CostCenterList::class)->name('cost-centers');
+        Route::get('/cost-center', CostCenterList::class)->name('cost-centers');
 
-        Route::prefix('cost-centers')->name('cost-centers.')->group(function () {
-            Route::get('/', function () {
-                return view('admin.coming-soon', ['title' => 'Cost Centers']);
-            })->name('index');
-        });
+        // Route::prefix('cost-centers')->name('cost-centers.')->group(function () {
+        //     Route::get('/', function () {
+        //         return view('admin.coming-soon', ['title' => 'Cost Centers']);
+        //     })->name('index');
+        // });
 
         // Service Types
         Route::prefix('service-types')->name('service-types.')->group(function () {

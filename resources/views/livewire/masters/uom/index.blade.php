@@ -1,4 +1,5 @@
 {{-- resources/views/livewire/masters/uom/index.blade.php --}}
+
 <div>
     <x-ui.page-header title='Unit of Measurement (UOM)' page='Masters' subpage='UOM' />
 

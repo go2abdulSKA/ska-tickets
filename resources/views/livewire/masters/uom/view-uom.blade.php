@@ -1,3 +1,4 @@
+
 <div class="offcanvas offcanvas-end show" style="visibility: visible;" tabindex="-1">
     <div class="offcanvas-header border-bottom">
         <h5 class="offcanvas-title">UOM Details</h5>

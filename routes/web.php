@@ -77,7 +77,8 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
         // Cost Centers
 
-        Route::get('/cost-center', CostCenterList::class)->name('cost-centers');
+        Route::get('cost-center', CostCenterList::class)->name('cost-centers');
+        // Route::get('/masters/cost-center', CostCenterList::class)->name('masters.cost-center');
 
         // Route::prefix('cost-centers')->name('cost-centers.')->group(function () {
         //     Route::get('/', function () {

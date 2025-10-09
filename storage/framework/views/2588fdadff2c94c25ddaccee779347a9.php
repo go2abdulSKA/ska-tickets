@@ -325,7 +325,7 @@
                     aria-expanded="<?php echo e(request()->routeIs('settings.*') ? 'true' : 'false'); ?>"
                     aria-controls="sidebarSettings"
                     class="side-nav-link <?php echo e(request()->routeIs('settings.*') ? '' : 'collapsed'); ?>">
-                    <span class="menu-icon"><i data-lucide="tool"></i></span>
+                    <span class="menu-icon"><i data-lucide="wrench"></i></span>
                     <span class="menu-text">Settings</span>
                     <span class="menu-arrow"></span>
                 </a>

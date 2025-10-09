@@ -67,8 +67,7 @@
                             <label class="dropdown-item">
                                 <i data-lucide="sun" class="align-middle me-1 fs-16"></i>
                                 <span class="align-middle">Light</span>
-                                <input class="form-check-input" type="radio" name="data-bs-theme"
-                                    value="light" />
+                                <input class="form-check-input" type="radio" name="data-bs-theme" value="light" />
                             </label>
                         </li>
 
@@ -76,8 +75,7 @@
                             <label class="dropdown-item">
                                 <i data-lucide="moon" class="align-middle me-1 fs-16"></i>
                                 <span class="align-middle">Dark</span>
-                                <input class="form-check-input" type="radio" name="data-bs-theme"
-                                    value="dark" />
+                                <input class="form-check-input" type="radio" name="data-bs-theme" value="dark" />
                             </label>
                         </li>
 
@@ -85,8 +83,7 @@
                             <label class="dropdown-item">
                                 <i data-lucide="monitor-cog" class="align-middle me-1 fs-16"></i>
                                 <span class="align-middle">System</span>
-                                <input class="form-check-input" type="radio" name="data-bs-theme"
-                                    value="system" />
+                                <input class="form-check-input" type="radio" name="data-bs-theme" value="system" />
                             </label>
                         </li>
                     </ul>
@@ -124,13 +121,12 @@
                     <a class="px-2 topbar-link dropdown-toggle drop-arrow-none" data-bs-toggle="dropdown"
                         data-bs-offset="0,19" href="#!" aria-haspopup="false" aria-expanded="false">
 
-<img 
-                        src="<?php echo e(Auth::user()->profile_photo_path ? asset('storage/' . Auth::user()->profile_photo_path) : asset('backend/assets/images/users/user-3.jpg')); ?>" 
+                        <img src="<?php echo e(Auth::user()->profile_photo_path ? asset('storage/' . Auth::user()->profile_photo_path) : asset('backend/assets/images/users/user-3.jpg')); ?>"
                             width="32" class="rounded-circle me-lg-2 d-flex" alt="user-image" />
 
                         
 
-                            <div class="gap-1 d-lg-flex align-items-center d-none">
+                        <div class="gap-1 d-lg-flex align-items-center d-none">
                             <h5 class="my-0"><?php echo e(Auth::user()->name ?? 'testing'); ?></h5>
                             <i class="align-middle ti ti-chevron-down"></i>
                         </div>
@@ -195,5 +191,4 @@
         </div>
     </div>
 </header>
-
 <?php /**PATH C:\xampp\htdocs\ska-tickets\resources\views/admin/partials/topbar.blade.php ENDPATH**/ ?>

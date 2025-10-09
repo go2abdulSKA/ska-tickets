@@ -317,10 +317,12 @@ $message = $__bag->first($__errorArgs[0]); ?>
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
+<div mt-2>
                             <small class="form-text text-muted">
                                 <i class="ti ti-hand-click me-1"></i>
                                 Hold <kbd>Ctrl</kbd> (Windows) or <kbd>Cmd</kbd> (Mac) to select multiple
                             </small>
+</div>                            
                         </div>
 
                         

@@ -37,6 +37,14 @@ class Department extends Model
         return $this->department;
     }
 
+    /**
+     * Scope to get only active departments
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+        
     // Relationships
     public function users()
     {
@@ -61,6 +69,15 @@ class Department extends Model
     public function tickets()
     {
         return $this->hasMany(TicketMaster::class);
+    }
+
+    // ==========================================
+    // Relationships
+    // ==========================================
+
+    public function ticketNumber()
+    {
+        return $this->hasOne(TicketNumber::class);
     }
 
     // FIXED: Changed from createdBy() to creator() for consistency

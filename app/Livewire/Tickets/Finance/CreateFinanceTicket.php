@@ -89,7 +89,6 @@ class CreateFinanceTicket extends Component
     // Validation tracking
     public $validatedSteps = [];
 
-    
     // ==========================================
     // Validation Rules
     // ==========================================
@@ -281,11 +280,36 @@ class CreateFinanceTicket extends Component
         try {
             switch ($this->currentStep) {
                 case 1:
-                    $this->validateOnly(['ticket_date', 'department_id', 'client_type', $this->client_type === ClientType::CLIENT->value ? 'client_id' : 'cost_center_id', 'service_type_id', 'payment_type', 'currency']);
+                    // Validate step 1 fields
+                    $this->validate([
+                        'ticket_date' => 'required|date',
+                        'department_id' => 'required|exists:departments,id',
+                        'client_type' => 'required|in:client,cost_center',
+                        'service_type_id' => 'nullable|exists:service_types,id',
+                        'payment_type' => 'required|in:po,cash,credit_card,na',
+                        'currency' => 'required|in:usd,aed,euro,others',
+                    ]);
+
+                    // Conditional validation based on client type
+                    if ($this->client_type === ClientType::CLIENT->value) {
+                        $this->validate([
+                            'client_id' => 'required|exists:clients,id',
+                        ]);
+                    } else {
+                        $this->validate([
+                            'cost_center_id' => 'required|exists:cost_centers,id',
+                        ]);
+                    }
                     break;
 
                 case 2:
-                    $this->validateOnly(['transactions', 'transactions.*.description', 'transactions.*.qty', 'transactions.*.uom_id', 'transactions.*.unit_cost']);
+                    $this->validate([
+                        'transactions' => 'required|array|min:1',
+                        'transactions.*.description' => 'required|string|max:500',
+                        'transactions.*.qty' => 'required|numeric|min:0.001',
+                        'transactions.*.uom_id' => 'required|exists:uom,id',
+                        'transactions.*.unit_cost' => 'required|numeric|min:0',
+                    ]);
 
                     if (empty($this->transactions)) {
                         $this->dispatch('toast', type: 'error', message: 'Please add at least one line item.');
@@ -294,7 +318,10 @@ class CreateFinanceTicket extends Component
                     break;
 
                 case 3:
-                    $this->validateOnly(['vat_percentage', 'remarks']);
+                    $this->validate([
+                        'vat_percentage' => 'required|numeric|min:0|max:100',
+                        'remarks' => 'nullable|string|max:1000',
+                    ]);
                     break;
             }
 
@@ -305,6 +332,46 @@ class CreateFinanceTicket extends Component
         }
     }
 
+    // private function validateCurrentStep(): bool
+    // {
+    //     try {
+    //         switch ($this->currentStep) {
+    //             case 1:
+    //                 // Build validation rules array for step 1
+    //                 $step1Rules = ['ticket_date', 'department_id', 'client_type', 'service_type_id', 'payment_type', 'currency'];
+
+    //                 // Add conditional validation based on client type
+    //                 if ($this->client_type === ClientType::CLIENT->value) {
+    //                     $step1Rules[] = 'client_id';
+    //                 } else {
+    //                     $step1Rules[] = 'cost_center_id';
+    //                 }
+
+    //                 // $this->validateOnly($step1Rules);
+    //                 $this->validateOnly(...$step1Rules);
+    //                 break;
+
+    //             case 2:
+    //                 $this->validateOnly(['transactions', 'transactions.*.description', 'transactions.*.qty', 'transactions.*.uom_id', 'transactions.*.unit_cost']);
+
+    //                 if (empty($this->transactions)) {
+    //                     $this->dispatch('toast', type: 'error', message: 'Please add at least one line item.');
+    //                     return false;
+    //                 }
+    //                 break;
+
+    //             case 3:
+    //                 $this->validateOnly(['vat_percentage', 'remarks']);
+    //                 break;
+    //         }
+
+    //         return true;
+    //     } catch (\Illuminate\Validation\ValidationException $e) {
+    //         $this->dispatch('toast', type: 'error', message: 'Please fix validation errors before continuing.');
+    //         return false;
+    //     }
+    // }
+
     // ==========================================
     // Line Items Management (Alpine.js assisted)
     // ==========================================
@@ -312,7 +379,7 @@ class CreateFinanceTicket extends Component
     public function addLineItem()
     {
         $this->transactions[] = [
-            'temp_id' => Str::uuid(),
+            'temp_id' => (string) Str::uuid(),
             'sr_no' => count($this->transactions) + 1,
             'description' => '',
             'qty' => 1,
@@ -339,7 +406,7 @@ class CreateFinanceTicket extends Component
     {
         if (isset($this->transactions[$index])) {
             $item = $this->transactions[$index];
-            $item['temp_id'] = Str::uuid();
+            $item['temp_id'] = (string) Str::uuid();
             $item['sr_no'] = count($this->transactions) + 1;
             $this->transactions[] = $item;
         }
@@ -714,12 +781,13 @@ class CreateFinanceTicket extends Component
             'posted_date' => now(),
         ]);
 
+//ReviseThis is commented out for now. We can enable it later if needed.
         // Send notification
-        try {
-            $ticket->user->notify(new TicketPostedNotification($ticket));
-        } catch (\Exception $e) {
-            \Log::error('Failed to send post notification: ' . $e->getMessage());
-        }
+        // try {
+        //     $ticket->user->notify(new TicketPostedNotification($ticket));
+        // } catch (\Exception $e) {
+        //     \Log::error('Failed to send post notification: ' . $e->getMessage());
+        // }
     }
 
     // ==========================================
@@ -760,7 +828,7 @@ class CreateFinanceTicket extends Component
         $this->transactions = $ticket->transactions
             ->map(function ($trans) {
                 return [
-                    'temp_id' => Str::uuid(),
+                    'temp_id' => (string) Str::uuid(),
                     'sr_no' => $trans->sr_no,
                     'description' => $trans->description,
                     'qty' => $trans->qty,
@@ -837,7 +905,6 @@ class CreateFinanceTicket extends Component
     //     $this->showQuickAddServiceType = false;
     //     $this->dispatch('toast', type: 'success', message: 'Service Type added successfully!');
     // }
-
 
     // Add method to open modal
     public function openQuickAddClient()

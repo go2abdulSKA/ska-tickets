@@ -1,8 +1,8 @@
-{{-- resources/views/livewire/tickets/finance/partials/line-items.blade.php --}}
+
 
 <div x-data="{
-    transactions: @entangle('transactions').live,
-    uoms: @js($uoms->toArray()),
+    transactions: <?php if ((object) ('transactions') instanceof \Livewire\WireDirective) : ?>window.Livewire.find('<?php echo e($__livewire->getId()); ?>').entangle('<?php echo e('transactions'->value()); ?>')<?php echo e('transactions'->hasModifier('live') ? '.live' : ''); ?><?php else : ?>window.Livewire.find('<?php echo e($__livewire->getId()); ?>').entangle('<?php echo e('transactions'); ?>')<?php endif; ?>.live,
+    uoms: <?php echo \Illuminate\Support\Js::from($uoms->toArray())->toHtml() ?>,
 
     addLine() {
         $wire.addLineItem();
@@ -27,7 +27,7 @@
     }
 }">
 
-    {{-- Header with Add Button --}}
+    
     <div class="mb-3 d-flex justify-content-between align-items-center">
         <div>
             <h5 class="mb-0">Line Items</h5>
@@ -40,7 +40,7 @@
         </button>
     </div>
 
-    {{-- Desktop Table View --}}
+    
     <div class="table-responsive d-none d-lg-block">
         <table class="table table-bordered table-hover">
             <thead class="table-light">
@@ -55,49 +55,63 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($transactions as $index => $item)
-                    <tr wire:key="transaction-{{ $item['temp_id'] }}">
-                        {{-- Sr No --}}
+                <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $transactions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <tr wire:key="transaction-<?php echo e($item['temp_id']); ?>">
+                        
                         <td class="text-center align-middle">
-                            <span class="fw-bold">{{ $index + 1 }}</span>
+                            <span class="fw-bold"><?php echo e($index + 1); ?></span>
                         </td>
 
-                        {{-- Description --}}
+                        
                         <td>
                             <textarea 
-                                wire:model.live.debounce.300ms="transactions.{{ $index }}.description"
+                                wire:model.live.debounce.300ms="transactions.<?php echo e($index); ?>.description"
                                 class="form-control form-control-sm" 
                                 rows="2" 
                                 placeholder="Enter service description..." 
                                 maxlength="500"></textarea>
-                            @error("transactions.{$index}.description")
-                                <small class="text-danger">{{ $message }}</small>
-                            @enderror
+                            <!--[if BLOCK]><![endif]--><?php $__errorArgs = ["transactions.{$index}.description"];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <small class="text-danger"><?php echo e($message); ?></small>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                         </td>
 
-                        {{-- Quantity --}}
+                        
                         <td>
                             <input type="number" 
-                                   wire:model.live.debounce.300ms="transactions.{{ $index }}.qty"
-                                   wire:change="calculateLineItemTotal({{ $index }})"
+                                   wire:model.live.debounce.300ms="transactions.<?php echo e($index); ?>.qty"
+                                   wire:change="calculateLineItemTotal(<?php echo e($index); ?>)"
                                    class="form-control form-control-sm text-end" 
                                    step="0.001" 
                                    min="0.001"
                                    placeholder="1.000">
-                            @error("transactions.{$index}.qty")
-                                <small class="text-danger">{{ $message }}</small>
-                            @enderror
+                            <!--[if BLOCK]><![endif]--><?php $__errorArgs = ["transactions.{$index}.qty"];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <small class="text-danger"><?php echo e($message); ?></small>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                         </td>
 
-                        {{-- UOM --}}
+                        
                         <td>
                             <div class="input-group input-group-sm">
-                                <select wire:model.live="transactions.{{ $index }}.uom_id"
+                                <select wire:model.live="transactions.<?php echo e($index); ?>.uom_id"
                                         class="form-select form-select-sm">
                                     <option value="">-- Select --</option>
-                                    @foreach($uoms as $uom)
-                                        <option value="{{ $uom->id }}">{{ $uom->code }}</option>
-                                    @endforeach
+                                    <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $uoms; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $uom): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($uom->id); ?>"><?php echo e($uom->code); ?></option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
                                 </select>
                                 <button type="button" 
                                         wire:click="openQuickAddUOM"
@@ -106,100 +120,114 @@
                                     <i class="mdi mdi-plus"></i>
                                 </button>
                             </div>
-                            @error("transactions.{$index}.uom_id")
-                                <small class="text-danger">{{ $message }}</small>
-                            @enderror
+                            <!--[if BLOCK]><![endif]--><?php $__errorArgs = ["transactions.{$index}.uom_id"];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <small class="text-danger"><?php echo e($message); ?></small>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                         </td>
 
-                        {{-- Unit Cost --}}
+                        
                         <td>
                             <input type="number" 
-                                   wire:model.live.debounce.300ms="transactions.{{ $index }}.unit_cost"
-                                   wire:change="calculateLineItemTotal({{ $index }})"
+                                   wire:model.live.debounce.300ms="transactions.<?php echo e($index); ?>.unit_cost"
+                                   wire:change="calculateLineItemTotal(<?php echo e($index); ?>)"
                                    class="form-control form-control-sm text-end" 
                                    step="0.01" 
                                    min="0"
                                    placeholder="0.00">
-                            @error("transactions.{$index}.unit_cost")
-                                <small class="text-danger">{{ $message }}</small>
-                            @enderror
+                            <!--[if BLOCK]><![endif]--><?php $__errorArgs = ["transactions.{$index}.unit_cost"];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                                <small class="text-danger"><?php echo e($message); ?></small>
+                            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                         </td>
 
-                        {{-- Total Cost (Calculated) --}}
+                        
                         <td class="align-middle">
-                            <strong class="text-primary">{{ number_format($item['total_cost'], 2) }}</strong>
+                            <strong class="text-primary"><?php echo e(number_format($item['total_cost'], 2)); ?></strong>
                         </td>
 
-                        {{-- Actions --}}
+                        
                         <td class="text-center align-middle">
                             <div class="btn-group btn-group-sm">
                                 <button type="button" 
-                                        wire:click="duplicateLineItem({{ $index }})"
+                                        wire:click="duplicateLineItem(<?php echo e($index); ?>)"
                                         class="btn btn-outline-info"
                                         title="Duplicate">
                                     <i class="mdi mdi-content-copy"></i>
                                 </button>
                                 <button type="button" 
-                                        wire:click="removeLineItem({{ $index }})"
+                                        wire:click="removeLineItem(<?php echo e($index); ?>)"
                                         class="btn btn-outline-danger"
                                         title="Remove"
-                                        @if(count($transactions) === 1) disabled @endif>
+                                        <?php if(count($transactions) === 1): ?> disabled <?php endif; ?>>
                                     <i class="mdi mdi-delete"></i>
                                 </button>
                             </div>
                         </td>
                     </tr>
-                @endforeach
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
             </tbody>
         </table>
     </div>
 
-    {{-- Mobile Card View --}}
+    
     <div class="d-lg-none">
-        @foreach($transactions as $index => $item)
-            <div class="mb-3 shadow-sm card" wire:key="transaction-mobile-{{ $item['temp_id'] }}">
+        <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $transactions; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+            <div class="mb-3 shadow-sm card" wire:key="transaction-mobile-<?php echo e($item['temp_id']); ?>">
                 <div class="py-2 card-header bg-light d-flex justify-content-between align-items-center">
-                    <span class="fw-bold">Item #{{ $index + 1 }}</span>
+                    <span class="fw-bold">Item #<?php echo e($index + 1); ?></span>
                     <div class="btn-group btn-group-sm">
                         <button type="button" 
-                                wire:click="duplicateLineItem({{ $index }})"
+                                wire:click="duplicateLineItem(<?php echo e($index); ?>)"
                                 class="btn btn-outline-info btn-sm"
                                 title="Duplicate">
                             <i class="mdi mdi-content-copy"></i>
                         </button>
                         <button type="button" 
-                                wire:click="removeLineItem({{ $index }})"
+                                wire:click="removeLineItem(<?php echo e($index); ?>)"
                                 class="btn btn-outline-danger btn-sm"
                                 title="Remove"
-                                @if(count($transactions) === 1) disabled @endif>
+                                <?php if(count($transactions) === 1): ?> disabled <?php endif; ?>>
                             <i class="mdi mdi-delete"></i>
                         </button>
                     </div>
                 </div>
 
                 <div class="card-body">
-                    {{-- Description --}}
+                    
                     <div class="mb-3">
                         <label class="form-label small fw-bold">
                             Description <span class="text-danger">*</span>
                         </label>
                         <textarea 
-                            wire:model.live.debounce.300ms="transactions.{{ $index }}.description"
+                            wire:model.live.debounce.300ms="transactions.<?php echo e($index); ?>.description"
                             class="form-control form-control-sm" 
                             rows="3" 
                             placeholder="Enter service description..." 
                             maxlength="500"></textarea>
                     </div>
 
-                    {{-- Quantity & UOM Row --}}
+                    
                     <div class="mb-3 row">
                         <div class="col-6">
                             <label class="form-label small fw-bold">
                                 Qty <span class="text-danger">*</span>
                             </label>
                             <input type="number" 
-                                   wire:model.live.debounce.300ms="transactions.{{ $index }}.qty"
-                                   wire:change="calculateLineItemTotal({{ $index }})"
+                                   wire:model.live.debounce.300ms="transactions.<?php echo e($index); ?>.qty"
+                                   wire:change="calculateLineItemTotal(<?php echo e($index); ?>)"
                                    class="form-control form-control-sm text-end" 
                                    step="0.001" 
                                    min="0.001"
@@ -210,12 +238,12 @@
                                 UOM <span class="text-danger">*</span>
                             </label>
                             <div class="input-group input-group-sm">
-                                <select wire:model.live="transactions.{{ $index }}.uom_id"
+                                <select wire:model.live="transactions.<?php echo e($index); ?>.uom_id"
                                         class="form-select form-select-sm">
                                     <option value="">-- Select --</option>
-                                    @foreach($uoms as $uom)
-                                        <option value="{{ $uom->id }}">{{ $uom->code }}</option>
-                                    @endforeach
+                                    <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $uoms; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $uom): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                        <option value="<?php echo e($uom->id); ?>"><?php echo e($uom->code); ?></option>
+                                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
                                 </select>
                                 <button type="button" 
                                         wire:click="openQuickAddUOM"
@@ -226,15 +254,15 @@
                         </div>
                     </div>
 
-                    {{-- Unit Cost & Total Row --}}
+                    
                     <div class="row">
                         <div class="col-6">
                             <label class="form-label small fw-bold">
                                 Unit Cost <span class="text-danger">*</span>
                             </label>
                             <input type="number" 
-                                   wire:model.live.debounce.300ms="transactions.{{ $index }}.unit_cost"
-                                   wire:change="calculateLineItemTotal({{ $index }})"
+                                   wire:model.live.debounce.300ms="transactions.<?php echo e($index); ?>.unit_cost"
+                                   wire:change="calculateLineItemTotal(<?php echo e($index); ?>)"
                                    class="form-control form-control-sm text-end" 
                                    step="0.01" 
                                    min="0"
@@ -243,15 +271,15 @@
                         <div class="col-6">
                             <label class="form-label small fw-bold">Total</label>
                             <div class="p-2 rounded text-end bg-light">
-                                <strong class="text-primary fs-5">{{ number_format($item['total_cost'], 2) }}</strong>
+                                <strong class="text-primary fs-5"><?php echo e(number_format($item['total_cost'], 2)); ?></strong>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-        @endforeach
+        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
 
-        {{-- Add Line Button (Mobile) --}}
+        
         <button type="button" 
                 wire:click="addLineItem" 
                 class="mb-3 btn btn-primary w-100">
@@ -259,27 +287,36 @@
         </button>
     </div>
 
-    {{-- Validation Errors --}}
-    @error('transactions')
-        <div class="mt-3 alert alert-danger">{{ $message }}</div>
-    @enderror
+    
+    <!--[if BLOCK]><![endif]--><?php $__errorArgs = ['transactions'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+        <div class="mt-3 alert alert-danger"><?php echo e($message); ?></div>
+    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
 
-    {{-- Summary Info --}}
+    
     <div class="mt-3 alert alert-info d-flex justify-content-between align-items-center">
         <span>
             <i class="mdi mdi-information-outline me-1"></i>
-            Total Line Items: <strong>{{ count($transactions) }}</strong>
+            Total Line Items: <strong><?php echo e(count($transactions)); ?></strong>
         </span>
         <span class="fw-bold">
-            Subtotal: {{ \App\Enums\Currency::from($currency)->symbol() }}{{ number_format($subtotal, 2) }}
+            Subtotal: <?php echo e(\App\Enums\Currency::from($currency)->symbol()); ?><?php echo e(number_format($subtotal, 2)); ?>
+
         </span>
     </div>
 
 </div>
 
-{{-- Keyboard Shortcuts Help --}}
+
 <div class="mt-3 text-muted small">
     <i class="mdi mdi-keyboard-outline me-1"></i>
     <strong>Tips:</strong> Use Tab to navigate between fields. Totals calculate automatically.
 </div>
 
+<?php /**PATH C:\xampp\htdocs\ska-tickets\resources\views/livewire/tickets/finance/partials/line-items.blade.php ENDPATH**/ ?>

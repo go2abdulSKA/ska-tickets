@@ -25,17 +25,7 @@ class Client extends Model
      *
      * @var array
      */
-    protected $fillable = [
-        'department_id',
-        'client_name',
-        'company_name',
-        'phone',
-        'email',
-        'address',
-        'is_active',
-        'created_by',
-        'updated_by',
-    ];
+    protected $fillable = ['department_id', 'client_name', 'company_name', 'phone', 'email', 'address', 'is_active', 'created_by', 'updated_by'];
 
     /**
      * Get the attributes that should be cast.
@@ -119,9 +109,9 @@ class Client extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('client_name', 'like', "%{$search}%")
-              ->orWhere('company_name', 'like', "%{$search}%")
-              ->orWhere('email', 'like', "%{$search}%")
-              ->orWhere('phone', 'like', "%{$search}%");
+                ->orWhere('company_name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%")
+                ->orWhere('phone', 'like', "%{$search}%");
         });
     }
 
@@ -152,7 +142,9 @@ class Client extends Model
 
         foreach ($names as $name) {
             $initials .= strtoupper(substr($name, 0, 1));
-            if (strlen($initials) >= 2) break;
+            if (strlen($initials) >= 2) {
+                break;
+            }
         }
 
         return $initials ?: 'CL';

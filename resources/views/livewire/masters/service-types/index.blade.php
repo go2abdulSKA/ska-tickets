@@ -205,7 +205,7 @@
                                                 <i class="ti ti-edit fs-lg"></i>
                                             </button>
                                             <button wire:click="confirmDelete({{ $serviceType->id }})"
-                                                class="btn btn-default btn-icon btn-sm rounded-circle" title="Delete">
+                                                class="btn btn-danger btn-icon btn-sm rounded-circle" title="Delete">
                                                 <i class="ti ti-trash fs-lg"></i>
                                             </button>
                                         </div>

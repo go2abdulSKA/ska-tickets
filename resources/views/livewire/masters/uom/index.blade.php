@@ -65,7 +65,9 @@
                     </div>
                 </div>
 
-                <div class="table-responsive">
+                <div class="table-responsive" wire:loading.class="opacity-50"
+                    wire:target="search, perPage, statusFilter, sortBy, sortDirection, selectAll, selectedItems">
+                    
                     <table class="table mb-0 table-custom table-centered table-select table-hover w-100">
                         <thead class="align-middle bg-opacity-25 bg-light thead-sm">
                             <tr class="text-uppercase fs-xxs">
@@ -136,7 +138,7 @@
                                                 <i class="ti ti-edit fs-lg"></i>
                                             </button>
                                             <button wire:click="confirmDelete({{ $uom->id }})"
-                                                class="btn btn-default btn-icon btn-sm rounded-circle" title="Delete">
+                                                class="btn btn-danger btn-icon btn-sm rounded-circle" title="Delete">
                                                 <i class="ti ti-trash fs-lg"></i>
                                             </button>
                                         </div>

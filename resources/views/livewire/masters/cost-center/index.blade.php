@@ -187,7 +187,7 @@
 
                                             {{-- Delete Button --}}
                                             <button wire:click="confirmDelete({{ $costCenter->id }})"
-                                                class="btn btn-default btn-icon btn-sm rounded-circle" title="Delete">
+                                                class="btn btn-danger btn-icon btn-sm rounded-circle" title="Delete">
                                                 <i class="ti ti-trash fs-lg"></i>
                                             </button>
                                         </div>

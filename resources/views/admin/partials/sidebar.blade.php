@@ -192,7 +192,8 @@
                 <a data-bs-toggle="collapse" href="#sidebarMasters"
                     aria-expanded="{{ request()->routeIs('masters.*') ? 'true' : 'false' }}"
                     aria-controls="sidebarMasters"
-                    class="side-nav-link {{ request()->routeIs('masters.*') ? '' : 'collapsed' }}">
+                    {{-- class="side-nav-link {{ request()->routeIs('masters.*') ? '' : 'collapsed' }}"> --}}
+                    class="side-nav-link" wire:current="collapsed">
                     <span class="menu-icon"><i data-lucide="settings"></i></span>
                     <span class="menu-text">Master Data</span>
                     <span class="menu-arrow"></span>
@@ -219,21 +220,24 @@
                         </li>
                         <li class="side-nav-item">
                             <a href="{{ route('masters.cost-centers') }}"
-                                class="side-nav-link {{ request()->routeIs('masters.cost-centers.*') ? 'active' : '' }}">
+                                {{-- class="side-nav-link {{ request()->routeIs('masters.cost-centers.*') ? 'active' : '' }}"> --}}
+                                class="side-nav-link" wire:current="active">
                                 <i data-lucide="building"></i>
                                 <span class="menu-text">Cost Centers</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
                             <a href="{{ route('masters.service-type') }}"
-                                class="side-nav-link {{ request()->routeIs('masters.service-type.*') ? 'active' : '' }}">
+                                {{-- class="side-nav-link {{ request()->routeIs('masters.service-type.*') ? 'active' : '' }}"> --}}
+                                class="side-nav-link" wire:current="active">
                                 <i data-lucide="clipboard-list"></i>
                                 <span class="menu-text">Service Types</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
                             <a href="{{ route('masters.uom-list') }}"
-                                class="side-nav-link {{ request()->routeIs('masters.uom-list.*') ? 'active' : '' }}">
+                                {{-- class="side-nav-link {{ request()->routeIs('masters.uom-list.*') ? 'active' : '' }}"> --}}
+                                class="side-nav-link" wire:current="active">
                                 <i data-lucide="package"></i>
                                 <span class="menu-text">UOM</span>
                             </a>

@@ -26,10 +26,8 @@
                                 Service Type <span class="text-danger">*</span>
                             </label>
                             <input wire:model="name" type="text"
-                                class="form-control @error('name') is-invalid @enderror"
-                                id="name"
-                                placeholder="e.g. Room Overnight, Vehicle Maintenance"
-                                maxlength="100">
+                                class="form-control @error('name') is-invalid @enderror" id="name"
+                                placeholder="e.g. Room Overnight, Vehicle Maintenance" maxlength="100">
                             @error('name')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -44,10 +42,9 @@
                                 Department <span class="text-danger">*</span>
                             </label>
                             <select wire:model="department_id"
-                                class="form-select @error('department_id') is-invalid @enderror"
-                                id="department_id">
+                                class="form-select @error('department_id') is-invalid @enderror" id="department_id">
                                 <option value="">Select Department</option>
-                                @foreach($departments as $dept)
+                                @foreach ($departments as $dept)
                                     <option value="{{ $dept->id }}">{{ $dept->name }}</option>
                                 @endforeach
                             </select>
@@ -59,12 +56,8 @@
                         {{-- Description --}}
                         <div class="col-md-12">
                             <label for="description" class="form-label">Description</label>
-                            <textarea wire:model="description"
-                                class="form-control @error('description') is-invalid @enderror"
-                                id="description"
-                                rows="3"
-                                placeholder="Optional description"
-                                maxlength="500"></textarea>
+                            <textarea wire:model="description" class="form-control @error('description') is-invalid @enderror" id="description"
+                                rows="3" placeholder="Optional description" maxlength="500"></textarea>
                             @error('description')
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
@@ -73,10 +66,7 @@
                         {{-- Status Checkbox --}}
                         <div class="col-md-12">
                             <div class="form-check">
-                                <input wire:model="is_active"
-                                    type="checkbox"
-                                    class="form-check-input"
-                                    id="is_active">
+                                <input wire:model="is_active" type="checkbox" class="form-check-input" id="is_active">
                                 <label class="form-check-label" for="is_active">
                                     Active
                                 </label>
@@ -94,6 +84,8 @@
                     <button type="submit" class="btn btn-primary">
                         <i class="mdi mdi-content-save me-1"></i>
                         {{ $editMode ? 'Update' : 'Save' }}
+                        <div wire:loading.delay class="spinner-border spinner-border-sm" wire:target="save"></div>
+
                     </button>
                 </div>
             </form>

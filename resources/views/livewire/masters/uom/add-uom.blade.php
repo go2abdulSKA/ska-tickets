@@ -1,4 +1,3 @@
-
 <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -64,6 +63,8 @@
                     <button type="button" class="btn btn-light" wire:click="closeModal">Cancel</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="mdi mdi-content-save me-1"></i> {{ $editMode ? 'Update' : 'Save' }}
+                        <div wire:loading.delay class="spinner-border spinner-border-sm" wire:target="save"></div>
+
                     </button>
                 </div>
             </form>
@@ -71,4 +72,3 @@
         </div>
     </div>
 </div>
-

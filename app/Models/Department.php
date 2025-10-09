@@ -63,13 +63,26 @@ class Department extends Model
         return $this->hasMany(TicketMaster::class);
     }
 
-    public function createdBy()
+    // FIXED: Changed from createdBy() to creator() for consistency
+    public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function updatedBy()
+    // FIXED: Changed from updatedBy() to updater() for consistency
+    public function updater()
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    // Keep backward compatibility aliases
+    public function createdBy()
+    {
+        return $this->creator();
+    }
+
+    public function updatedBy()
+    {
+        return $this->updater();
     }
 }

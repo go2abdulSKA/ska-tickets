@@ -2,6 +2,7 @@
 
 use App\Livewire\Masters\UOM\UOMList;
 use Illuminate\Support\Facades\Route;
+use App\Livewire\Masters\Department\DepartmentList;
 use App\Livewire\Masters\CostCenters\CostCenterList;
 use App\Livewire\Masters\ServiceTypes\ServiceTypeList;
 
@@ -55,12 +56,16 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
     // Masters Routes
     Route::prefix('masters')->name('masters.')->group(function () {
+
         // Departments
-        Route::prefix('departments')->name('departments.')->group(function () {
-            Route::get('/', function () {
-                return view('admin.coming-soon', ['title' => 'Departments']);
-            })->name('index');
-        });
+        
+        Route::get('/department', DepartmentList::class)->name('department');
+
+        // Route::prefix('departments')->name('departments.')->group(function () {
+        //     Route::get('/', function () {
+        //         return view('admin.coming-soon', ['title' => 'Departments']);
+        //     })->name('index');
+        // });
 
         // Users
         Route::prefix('users')->name('users.')->group(function () {

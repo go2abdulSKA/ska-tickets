@@ -7,7 +7,7 @@
 <div class="modal fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            
+
             {{-- Modal Header --}}
             <div class="pb-0 border-0 modal-header">
                 <h5 class="modal-title">Confirm Bulk Deletion</h5>
@@ -31,18 +31,18 @@
                 {{-- Get Selected Departments --}}
                 @php
                     $selectedDepartments = \App\Models\Department::whereIn('id', $selectedItems)->get();
-                    
+
                     // Check usage
                     $departmentsInUse = [];
                     $canDelete = [];
-                    
+
                     foreach ($selectedDepartments as $dept) {
                         $userCount = $dept->users()->count();
                         $ticketCount = $dept->tickets()->count();
                         $clientCount = $dept->clients()->count();
                         $serviceTypeCount = $dept->serviceTypes()->count();
                         $totalUsage = $userCount + $ticketCount + $clientCount + $serviceTypeCount;
-                        
+
                         if ($totalUsage > 0) {
                             $departmentsInUse[] = [
                                 'dept' => $dept,
@@ -52,7 +52,7 @@
                                     'tickets' => $ticketCount,
                                     'clients' => $clientCount,
                                     'services' => $serviceTypeCount,
-                                ]
+                                ],
                             ];
                         } else {
                             $canDelete[] = $dept;
@@ -64,7 +64,7 @@
                 <div class="mb-4 alert alert-warning text-start">
                     <p class="mb-2 fw-bold">Selected Departments:</p>
                     <ul class="mb-0 ps-3 small">
-                        @foreach($selectedDepartments as $dept)
+                        @foreach ($selectedDepartments as $dept)
                             <li>
                                 {{ $dept->department }}
                                 <span class="badge badge-soft-primary">{{ $dept->prefix }}</span>
@@ -74,7 +74,7 @@
                 </div>
 
                 {{-- If some departments are in use --}}
-                @if(count($departmentsInUse) > 0)
+                @if (count($departmentsInUse) > 0)
                     <div class="p-3 mb-3 alert alert-danger text-start">
                         <h6 class="mb-2">
                             <i class="ti ti-alert-circle me-1"></i>
@@ -84,20 +84,20 @@
                             The following departments are currently being used:
                         </p>
                         <ul class="mb-0 ps-3 small">
-                            @foreach($departmentsInUse as $item)
+                            @foreach ($departmentsInUse as $item)
                                 <li>
                                     <strong>{{ $item['dept']->department }}</strong>
                                     <ul class="mt-1">
-                                        @if($item['details']['users'] > 0)
+                                        @if ($item['details']['users'] > 0)
                                             <li>{{ $item['details']['users'] }} user(s)</li>
                                         @endif
-                                        @if($item['details']['tickets'] > 0)
+                                        @if ($item['details']['tickets'] > 0)
                                             <li>{{ $item['details']['tickets'] }} ticket(s)</li>
                                         @endif
-                                        @if($item['details']['clients'] > 0)
+                                        @if ($item['details']['clients'] > 0)
                                             <li>{{ $item['details']['clients'] }} client(s)</li>
                                         @endif
-                                        @if($item['details']['services'] > 0)
+                                        @if ($item['details']['services'] > 0)
                                             <li>{{ $item['details']['services'] }} service type(s)</li>
                                         @endif
                                     </ul>
@@ -108,14 +108,14 @@
                 @endif
 
                 {{-- If some can be deleted --}}
-                @if(count($canDelete) > 0)
+                @if (count($canDelete) > 0)
                     <div class="p-3 mb-3 alert alert-info text-start">
                         <h6 class="mb-2">
                             <i class="ti ti-check-circle me-1"></i>
                             {{ count($canDelete) }} Department(s) Can be Deleted
                         </h6>
                         <ul class="mb-0 ps-3 small">
-                            @foreach($canDelete as $dept)
+                            @foreach ($canDelete as $dept)
                                 <li>{{ $dept->department }}</li>
                             @endforeach
                         </ul>
@@ -130,13 +130,11 @@
 
                 {{-- Action Buttons --}}
                 <div class="gap-2 d-grid">
-                    @if(count($canDelete) > 0)
+                    @if (count($canDelete) > 0)
                         {{-- Confirm Delete Button --}}
-                        <button wire:click="deleteSelected" 
-                                class="btn btn-danger btn-lg"
-                                wire:loading.attr="disabled">
+                        <button wire:click="deleteSelected" class="btn btn-danger btn-lg" wire:loading.attr="disabled">
                             <span wire:loading.remove wire:target="deleteSelected">
-                                <i class="ti ti-trash me-1"></i> 
+                                <i class="ti ti-trash me-1"></i>
                                 Yes, Delete {{ count($canDelete) }} Department(s)!
                             </span>
                             <span wire:loading wire:target="deleteSelected">

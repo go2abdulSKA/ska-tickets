@@ -191,18 +191,17 @@
             <li class="side-nav-item">
                 <a data-bs-toggle="collapse" href="#sidebarMasters"
                     aria-expanded="{{ request()->routeIs('masters.*') ? 'true' : 'false' }}"
-                    aria-controls="sidebarMasters" {{-- class="side-nav-link {{ request()->routeIs('masters.*') ? '' : 'collapsed' }}"> --}} class="side-nav-link"
+                    aria-controls="sidebarMasters" {{-- {{ request()->routeIs('masters.*') ? '' : 'collapsed' }}"> --}} class="side-nav-link"
                     wire:current="collapsed">
                     <span class="menu-icon"><i data-lucide="settings"></i></span>
                     <span class="menu-text">Master Data</span>
                     <span class="menu-arrow"></span>
                 </a>
+
                 <div class="collapse {{ request()->routeIs('masters.*') ? 'show' : '' }}" id="sidebarMasters">
                     <ul class="sub-menu">
                         <li class="side-nav-item">
-                            <a href="{{ route('masters.department') }}"
-                                {{-- class="side-nav-link {{ request()->routeIs('masters.department') ? 'active' : '' }}"> --}}
-                                class="side-nav-link"
+                            <a href="{{ route('masters.department') }}" {{-- {{ request()->routeIs('masters.department') ? 'active' : '' }}"> --}} class="side-nav-link"
                                 wire:current="active">
                                 <i class="ti ti-building-factory-2"></i>
                                 <span class="menu-text"> Departments </span>
@@ -210,33 +209,39 @@
                         </li>
                         <li class="side-nav-item">
                             <a href="{{ route('masters.users.index') }}"
-                                class="side-nav-link {{ request()->routeIs('masters.users.*') ? 'active' : '' }}">
+                                class="side-nav-link" wire:current="active">
+                                {{-- {{ request()->routeIs('masters.users.*') ? 'active' : '' }}"> --}}
                                 <span" class="menu-text">Users</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
-                            <a href="{{ route('masters.clients.index') }}"
-                                class="side-nav-link {{ request()->routeIs('masters.clients.*') ? 'active' : '' }}">
-                                <span>Clients</span>
+                            <a href="{{ route('masters.client') }}"
+                                class="side-nav-link" wire:current="active">
+                                {{-- {{ request()->routeIs('masters.client') ? 'active' : '' }}"> --}}
+                                <i class="ti ti-users"></i>
+                                <span class="menu-text"> Clients </span>
                             </a>
                         </li>
                         <li class="side-nav-item">
-                            <a href="{{ route('masters.cost-centers') }}" {{-- class="side-nav-link {{ request()->routeIs('masters.cost-centers.*') ? 'active' : '' }}"> --}} class="side-nav-link"
-                                wire:current="active">
+                            <a href="{{ route('masters.cost-centers') }}"
+                                {{-- {{ request()->routeIs('masters.cost-centers.*') ? 'active' : '' }}"> --}} 
+                                class="side-nav-link" wire:current="active">
                                 <i data-lucide="building"></i>
                                 <span class="menu-text">Cost Centers</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
-                            <a href="{{ route('masters.service-type') }}" {{-- class="side-nav-link {{ request()->routeIs('masters.service-type.*') ? 'active' : '' }}"> --}} class="side-nav-link"
-                                wire:current="active">
+                            <a href="{{ route('masters.service-type') }}" 
+                                {{-- {{ request()->routeIs('masters.service-type.*') ? 'active' : '' }}"> --}}
+                                class="side-nav-link" wire:current="active">
                                 <i data-lucide="clipboard-list"></i>
                                 <span class="menu-text">Service Types</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
-                            <a href="{{ route('masters.uom-list') }}" {{-- class="side-nav-link {{ request()->routeIs('masters.uom-list.*') ? 'active' : '' }}"> --}} class="side-nav-link"
-                                wire:current="active">
+                            <a href="{{ route('masters.uom-list') }}" 
+                                {{-- {{ request()->routeIs('masters.uom-list.*') ? 'active' : '' }}"> --}}
+                                class="side-nav-link" wire:current="active">
                                 <i data-lucide="package"></i>
                                 <span class="menu-text">UOM</span>
                             </a>

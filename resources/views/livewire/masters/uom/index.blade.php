@@ -4,20 +4,9 @@
     <x-ui.page-header title='Unit of Measurement (UOM)' page='Masters' subpage='UOM' />
 
     {{-- Flash Messages --}}
-    @if (session()->has('success'))
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="mdi mdi-check-all me-2"></i> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
+    <x-ui.flash-msg />
 
-    @if (session()->has('error'))
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="mdi mdi-alert-circle-outline me-2"></i> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    @endif
-
+    {{-- Main Content --}}
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -38,6 +27,7 @@
                     </div>
 
                     <div class="gap-1 d-flex align-items-center">
+
                         <!-- Records Per Page -->
                         <div>
                             <select wire:model.live="perPage" class="my-1 form-select form-control my-md-0">

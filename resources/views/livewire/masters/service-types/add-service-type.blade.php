@@ -81,11 +81,15 @@
                     <button type="button" class="btn btn-light" wire:click="closeModal">
                         Cancel
                     </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="mdi mdi-content-save me-1"></i>
-                        {{ $editMode ? 'Update' : 'Save' }}
-                        <div wire:loading.delay class="spinner-border spinner-border-sm" wire:target="save"></div>
-
+                    <button type="submit" class="btn btn-primary" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="save">
+                            <i class="mdi mdi-content-save me-1"></i>
+                            {{ $editMode ? 'Update' : 'Save' }}
+                        </span>
+                        <span wire:loading wire:target="save">
+                            <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                            Saving...
+                        </span>
                     </button>
                 </div>
             </form>

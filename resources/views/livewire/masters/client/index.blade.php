@@ -1,18 +1,29 @@
 {{--
-    resources/views/livewire/masters/department/index.blade.php
+    resources/views/livewire/masters/client/index.blade.php
 
-    Department List View
-    Displays departments in a table with search, filter, and CRUD operations
+    Client List View
+    Displays clients in a table with search, filter, and CRUD operations
 --}}
 
 <div>
     {{-- Page Header --}}
-    <x-ui.page-header title='Department' page='Masters' subpage='Department' />
+    <x-ui.page-header title='Client' page='Masters' subpage='Client' />
 
     {{-- Flash Messages --}}
-    <x-ui.flash-msg />
+    @if (session()->has('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="mdi mdi-check-all me-2"></i> {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
 
-    {{-- Main Content --}}
+    @if (session()->has('error'))
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="mdi mdi-alert-circle-outline me-2"></i> {{ session('error') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    @endif
+
     <div class="row">
         <div class="col-12">
             <div class="card">
@@ -24,7 +35,7 @@
                         {{-- Search Input --}}
                         <div class="app-search">
                             <input wire:model.live.debounce.300ms="search" type="search" class="form-control"
-                                placeholder="Search Department...">
+                                placeholder="Search Client...">
                             <i data-lucide="search" class="app-search-icon text-muted"></i>
                         </div>
 
@@ -49,6 +60,17 @@
                             </select>
                         </div>
 
+                        {{-- Department Filter --}}
+                        <div class="app-search">
+                            <select wire:model.live="departmentFilter" class="my-1 form-select form-control my-md-0">
+                                <option value="">All Departments</option>
+                                @foreach($departments as $dept)
+                                    <option value="{{ $dept->id }}">{{ $dept->short_name ?? $dept->department }}</option>
+                                @endforeach
+                            </select>
+                            <i data-lucide="building" class="app-search-icon text-muted"></i>
+                        </div>
+
                         {{-- Status Filter --}}
                         <div class="app-search">
                             <select wire:model.live="statusFilter" class="my-1 form-select form-control my-md-0">
@@ -61,7 +83,7 @@
 
                         {{-- Add New Button --}}
                         <button wire:click="openModal" class="btn btn-primary ms-1">
-                            <i data-lucide="plus" class="fs-sm me-2"></i> Add Department
+                            <i data-lucide="plus" class="fs-sm me-2"></i> Add Client
                         </button>
                     </div>
                 </div>
@@ -78,20 +100,20 @@
                                         class="mt-0 form-check-input form-check-input-light fs-14" type="checkbox">
                                 </th>
 
-                                {{-- Logo Column --}}
-                                <th style="width: 80px;">Logo</th>
-
-                                {{-- Department Column (Sortable) --}}
-                                <th wire:click="sortBy('department')" style="cursor: pointer;">
-                                    Department
+                                {{-- Client Name Column (Sortable) --}}
+                                <th wire:click="sortBy('client_name')" style="cursor: pointer;">
+                                    Client Name
                                     <i class="ti ti-arrows-sort fs-xs ms-1"></i>
                                 </th>
 
-                                {{-- Short Name Column --}}
-                                <th>Short Name</th>
+                                {{-- Company Column --}}
+                                <th>Company</th>
 
-                                {{-- Prefix Column --}}
-                                <th>Prefix</th>
+                                {{-- Department Column --}}
+                                <th>Department</th>
+
+                                {{-- Contact Column --}}
+                                <th>Contact</th>
 
                                 {{-- Usage Column --}}
                                 <th>Usage</th>
@@ -112,86 +134,68 @@
 
                         {{-- Table Body --}}
                         <tbody>
-                            @forelse($departments as $department)
+                            @forelse($clients as $client)
                                 <tr>
                                     {{-- Checkbox --}}
                                     <td class="ps-3">
-                                        <input wire:model.live="selectedItems" value="{{ $department->id }}"
+                                        <input wire:model.live="selectedItems" value="{{ $client->id }}"
                                             class="mt-0 form-check-input form-check-input-light fs-14" type="checkbox">
                                     </td>
 
-                                    {{-- Logo --}}
+                                    {{-- Client Name (Clickable to view) --}}
                                     <td>
-                                        @if($department->logo_path)
-                                            <img src="{{ asset('storage/' . $department->logo_path) }}" 
-                                                 alt="{{ $department->department }}"
-                                                 class="rounded"
-                                                 style="height: 40px; width: 60px; object-fit: contain;">
-                                        @else
-                                            <div class="rounded d-flex align-items-center justify-content-center bg-light" 
-                                                 style="height: 40px; width: 60px;">
-                                                <i class="ti ti-building-factory-2 text-muted"></i>
-                                            </div>
-                                        @endif
-                                    </td>
-
-                                    {{-- Department Name (Clickable to view) --}}
-                                    <td>
-                                        <a href="javascript:void(0);" wire:click="view({{ $department->id }})">
-                                            <h5 class="mb-0 fs-base">{{ $department->department }}</h5>
+                                        <a href="javascript:void(0);" wire:click="view({{ $client->id }})">
+                                            <h5 class="mb-0 fs-base">{{ $client->client_name }}</h5>
                                         </a>
                                     </td>
 
-                                    {{-- Short Name --}}
+                                    {{-- Company Name --}}
                                     <td>
-                                        <span class="text-muted">{{ $department->short_name ?? 'N/A' }}</span>
+                                        <span class="text-muted">{{ $client->company_name ?? 'N/A' }}</span>
                                     </td>
 
-                                    {{-- Prefix --}}
+                                    {{-- Department --}}
                                     <td>
-                                        <span class="badge badge-soft-primary fs-xs">{{ $department->prefix }}</span>
+                                        <span class="badge badge-soft-primary fs-xs">
+                                            {{ $client->department->short_name ?? $client->department->department }}
+                                        </span>
+                                    </td>
+
+                                    {{-- Contact --}}
+                                    <td>
+                                        @if($client->phone)
+                                            <div class="small">
+                                                <i class="ti ti-phone me-1"></i>{{ $client->phone }}
+                                            </div>
+                                        @endif
+                                        @if($client->email)
+                                            <div class="small text-muted">
+                                                <i class="ti ti-mail me-1"></i>{{ $client->email }}
+                                            </div>
+                                        @endif
+                                        @if(!$client->phone && !$client->email)
+                                            <span class="text-muted small">N/A</span>
+                                        @endif
                                     </td>
 
                                     {{-- Usage Count --}}
                                     <td>
-                                        <div class="gap-1 d-flex flex-column">
-                                            @if($department->users_count > 0)
-                                                <span class="badge badge-soft-info fs-xxs">
-                                                    {{ $department->users_count }} users
-                                                </span>
-                                            @endif
-                                            @if($department->tickets_count > 0)
-                                                <span class="badge badge-soft-success fs-xxs">
-                                                    {{ $department->tickets_count }} tickets
-                                                </span>
-                                            @endif
-                                            @if($department->clients_count > 0)
-                                                <span class="badge badge-soft-warning fs-xxs">
-                                                    {{ $department->clients_count }} clients
-                                                </span>
-                                            @endif
-                                            @if($department->service_types_count > 0)
-                                                <span class="badge badge-soft-secondary fs-xxs">
-                                                    {{ $department->service_types_count }} services
-                                                </span>
-                                            @endif
-                                            @if($department->users_count == 0 && $department->tickets_count == 0 && $department->clients_count == 0 && $department->service_types_count == 0)
-                                                <span class="text-muted small">Not in use</span>
-                                            @endif
-                                        </div>
+                                        <span class="badge badge-soft-info fs-xxs">
+                                            {{ $client->tickets_count }} tickets
+                                        </span>
                                     </td>
 
                                     {{-- Created Date --}}
                                     <td>
-                                        {{ $department->created_at->format('d M, Y') }}
-                                        <small class="text-muted">{{ $department->created_at->format('h:i A') }}</small>
+                                        {{ $client->created_at->format('d M, Y') }}
+                                        <small class="text-muted">{{ $client->created_at->format('h:i A') }}</small>
                                     </td>
 
                                     {{-- Status Badge --}}
                                     <td>
                                         <span
-                                            class="badge badge-soft-{{ $department->is_active ? 'success' : 'danger' }} fs-xxs">
-                                            {{ $department->is_active ? 'Active' : 'Inactive' }}
+                                            class="badge badge-soft-{{ $client->is_active ? 'success' : 'danger' }} fs-xxs">
+                                            {{ $client->is_active ? 'Active' : 'Inactive' }}
                                         </span>
                                     </td>
 
@@ -199,22 +203,22 @@
                                     <td>
                                         <div class="gap-1 d-flex justify-content-center">
                                             {{-- View Button --}}
-                                            <button wire:click="view({{ $department->id }})"
+                                            <button wire:click="view({{ $client->id }})"
                                                 wire:loading.attr="disabled"
-                                                wire:target="view({{ $department->id }})"
+                                                wire:target="view({{ $client->id }})"
                                                 class="btn btn-default btn-icon btn-sm rounded-circle"
                                                 title="View Details"
                                                 type="button">
-                                                <span wire:loading.remove wire:target="view({{ $department->id }})">
+                                                <span wire:loading.remove wire:target="view({{ $client->id }})">
                                                     <i class="ti ti-eye fs-lg"></i>
                                                 </span>
-                                                <span wire:loading wire:target="view({{ $department->id }})">
+                                                <span wire:loading wire:target="view({{ $client->id }})">
                                                     <span class="spinner-border spinner-border-sm"></span>
                                                 </span>
                                             </button>
 
                                             {{-- Edit Button --}}
-                                            <button wire:click="edit({{ $department->id }})"
+                                            <button wire:click="edit({{ $client->id }})"
                                                 class="btn btn-default btn-icon btn-sm rounded-circle" 
                                                 title="Edit"
                                                 type="button">
@@ -222,7 +226,7 @@
                                             </button>
 
                                             {{-- Delete Button --}}
-                                            <button wire:click="confirmDelete({{ $department->id }})"
+                                            <button wire:click="confirmDelete({{ $client->id }})"
                                                 class="btn btn-danger btn-icon btn-sm rounded-circle" 
                                                 title="Delete"
                                                 type="button">
@@ -235,8 +239,8 @@
                                 {{-- Empty State --}}
                                 <tr>
                                     <td colspan="9" class="py-4 text-center">
-                                        <i class="ti ti-building-factory-2" style="font-size: 48px; color: #dee2e6;"></i>
-                                        <p class="mt-2 text-muted">No Departments found</p>
+                                        <i class="ti ti-users" style="font-size: 48px; color: #dee2e6;"></i>
+                                        <p class="mt-2 text-muted">No Clients found</p>
                                     </td>
                                 </tr>
                             @endforelse
@@ -250,14 +254,14 @@
                         {{-- Pagination Info --}}
                         <div class="text-muted">
                             Showing
-                            <span class="fw-semibold">{{ $departments->firstItem() ?? 0 }}</span> to
-                            <span class="fw-semibold">{{ $departments->lastItem() ?? 0 }}</span> of
-                            <span class="fw-semibold">{{ $departments->total() }}</span> Departments
+                            <span class="fw-semibold">{{ $clients->firstItem() ?? 0 }}</span> to
+                            <span class="fw-semibold">{{ $clients->lastItem() ?? 0 }}</span> of
+                            <span class="fw-semibold">{{ $clients->total() }}</span> Clients
                         </div>
 
                         {{-- Pagination Links --}}
                         <div>
-                            {{ $departments->links() }}
+                            {{ $clients->links() }}
                         </div>
                     </div>
                 </div>
@@ -266,24 +270,24 @@
 
         {{-- Modals and Offcanvas --}}
 
-        {{-- Add/Edit Department Modal --}}
+        {{-- Add/Edit Client Modal --}}
         @if ($showModal)
-            @include('livewire.masters.department.add-department')
+            @include('livewire.masters.client.add-client')
         @endif
 
         {{-- View Offcanvas --}}
-        @if ($showOffcanvas && $viewDepartment)
-            @include('livewire.masters.department.view-department')
+        @if ($showOffcanvas && $viewClient)
+            @include('livewire.masters.client.view-client')
         @endif
 
         {{-- Delete Confirmation Modal --}}
         @if ($showDeleteModal)
-            @include('livewire.masters.department.delete-department')
+            @include('livewire.masters.client.delete-client')
         @endif
 
         {{-- Bulk Delete Confirmation Modal --}}
         @if ($showBulkDeleteModal)
-            @include('livewire.masters.department.bulk-delete-department')
+            @include('livewire.masters.client.bulk-delete-client')
         @endif
 
     </div><!-- end row -->
@@ -294,30 +298,23 @@
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialize Lucide icons on page load
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
-
-            // Debug: Log when view button is clicked
-            console.log('Department list page loaded');
         });
 
-        // Reinitialize Lucide icons after Livewire navigation
         document.addEventListener('livewire:navigated', function() {
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
         });
 
-        // CRITICAL: Reinitialize icons after ANY Livewire update
         document.addEventListener('livewire:update', function() {
             if (typeof lucide !== 'undefined') {
                 lucide.createIcons();
             }
         });
 
-        // Also handle after morph updates
         if (typeof Livewire !== 'undefined') {
             Livewire.hook('morph.updated', ({el, component}) => {
                 if (typeof lucide !== 'undefined') {
@@ -325,20 +322,12 @@
                 }
             });
 
-            // Handle after component updates
             Livewire.hook('commit', ({component, commit, respond}) => {
                 respond(() => {
                     if (typeof lucide !== 'undefined') {
                         lucide.createIcons();
                     }
                 });
-            });
-        }
-
-        // Listen for Livewire events
-        if (typeof Livewire !== 'undefined') {
-            Livewire.on('departmentViewed', (data) => {
-                console.log('Department view triggered:', data);
             });
         }
     </script>

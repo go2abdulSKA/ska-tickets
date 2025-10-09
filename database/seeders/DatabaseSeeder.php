@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Client;
 use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
@@ -21,6 +22,8 @@ class DatabaseSeeder extends Seeder
             DepartmentSeeder::class,
             UOMSeeder::class,
             CostCenterSeeder::class,
+            ClientSeeder::class,
+            ServiceTypeSeeder::class,
             UserSeeder::class,
         ]);
 

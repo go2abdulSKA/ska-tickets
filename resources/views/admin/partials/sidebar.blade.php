@@ -208,31 +208,33 @@
                         <li class="side-nav-item">
                             <a href="{{ route('masters.users.index') }}"
                                 class="side-nav-link {{ request()->routeIs('masters.users.*') ? 'active' : '' }}">
-                                <span class="menu-text">Users</span>
+                                <span">Users</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
                             <a href="{{ route('masters.clients.index') }}"
                                 class="side-nav-link {{ request()->routeIs('masters.clients.*') ? 'active' : '' }}">
-                                <span class="menu-text">Clients</span>
+                                <span>Clients</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
                             <a href="{{ route('masters.cost-centers') }}"
-                                class="{{ request()->routeIs('masters.cost-centers.*') ? 'active' : '' }}">
+                                class="side-nav-link {{ request()->routeIs('masters.cost-centers.*') ? 'active' : '' }}">
                                 <i data-lucide="building"></i>
-                                <span>Cost Centers</span>
+                                <span class="menu-text">Cost Centers</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
-                            <a href="{{ route('masters.service-types.index') }}"
-                                class="side-nav-link {{ request()->routeIs('masters.service-types.*') ? 'active' : '' }}">
+                            <a href="{{ route('masters.service-type') }}"
+                                class="side-nav-link {{ request()->routeIs('masters.service-type.*') ? 'active' : '' }}">
+                                <i data-lucide="clipboard-list"></i>
                                 <span class="menu-text">Service Types</span>
                             </a>
                         </li>
                         <li class="side-nav-item">
                             <a href="{{ route('masters.uom-list') }}"
                                 class="side-nav-link {{ request()->routeIs('masters.uom-list.*') ? 'active' : '' }}">
+                                <i data-lucide="package"></i>
                                 <span class="menu-text">UOM</span>
                             </a>
                         </li>

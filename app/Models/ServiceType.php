@@ -65,10 +65,11 @@ class ServiceType extends Model
 
     /**
      * Get all tickets using this service type
+     * FIXED: Added this relationship
      */
     public function tickets(): HasMany
     {
-        return $this->hasMany(TicketMaster::class);
+        return $this->hasMany(TicketMaster::class, 'service_type_id');
     }
 
     /**
@@ -115,5 +116,19 @@ class ServiceType extends Model
     public function scopeSearch($query, string $search)
     {
         return $query->where('service_type', 'like', "%{$search}%");
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Accessors
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Get full display name (Service Type - Department)
+     */
+    public function getFullNameAttribute(): string
+    {
+        return "{$this->service_type} - {$this->department->name}";
     }
 }

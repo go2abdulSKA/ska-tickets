@@ -1,8 +1,9 @@
 <?php
 
-use App\Livewire\Masters\CostCenters\CostCenterList;
 use App\Livewire\Masters\UOM\UOMList;
 use Illuminate\Support\Facades\Route;
+use App\Livewire\Masters\CostCenters\CostCenterList;
+use App\Livewire\Masters\ServiceTypes\ServiceTypeList;
 
 Route::get('/', function () {
     return view('welcome');
@@ -77,7 +78,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
         // Cost Centers
 
-        Route::get('cost-center', CostCenterList::class)->name('cost-centers');
+        Route::get('/cost-center', CostCenterList::class)->name('cost-centers');
         // Route::get('/masters/cost-center', CostCenterList::class)->name('masters.cost-center');
 
         // Route::prefix('cost-centers')->name('cost-centers.')->group(function () {
@@ -87,11 +88,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         // });
 
         // Service Types
-        Route::prefix('service-types')->name('service-types.')->group(function () {
-            Route::get('/', function () {
-                return view('admin.coming-soon', ['title' => 'Service Types']);
-            })->name('index');
-        });
+
+        Route::get('service-type', ServiceTypeList::class)->name('service-type');
+
+        // Route::prefix('service-types')->name('service-types.')->group(function () {
+        //     Route::get('/', function () {
+        //         return view('admin.coming-soon', ['title' => 'Service Types']);
+        //     })->name('index');
+        // });
 
         // UOM
         // Route::prefix('uom')->name('uom.')->group(function () {

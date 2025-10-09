@@ -3,282 +3,504 @@
 
 namespace App\Livewire\Masters\ServiceTypes;
 
-use App\Livewire\Components\DataTable;
 use App\Models\ServiceType;
 use App\Models\Department;
-use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
+use Livewire\WithPagination;
+use Livewire\WithoutUrlPagination;
 
 /**
  * Service Type List Component
  *
- * Displays all service types in a data table with CRUD operations
- * Service types are department-specific
+ * Manages CRUD operations for Service Types
+ * Includes department relationship
  */
-class ServiceTypeList extends DataTable
+class ServiceTypeList extends Component
 {
-    public $entityName = 'Service Type';
+    use WithPagination, WithoutUrlPagination;
 
-    // Form properties
-    public $serviceTypeId;
-    public $department_id = '';
-    public $service_type = '';
+    // ==========================================
+    // Properties
+    // ==========================================
+
+    /** @var string Search query */
+    public $search = '';
+
+    /** @var string Status filter (empty, 'Active', 'Inactive') */
+    public $statusFilter = '';
+
+    /** @var string Department filter */
+    public $departmentFilter = '';
+
+    /** @var string Sort field */
+    // public $sortField = 'code';
+
+    /** @var string Sort direction */
+    public $sortDirection = 'asc';
+
+    /** @var int Records per page */
+    public $perPage = 5;
+
+    // ==========================================
+    // Modal Properties
+    // ==========================================
+
+    /** @var bool Show add/edit modal */
+    public $showModal = false;
+
+    /** @var bool Edit mode flag */
+    public $editMode = false;
+
+    /** @var int|null Service type ID being edited */
+    public $serviceTypeId = null;
+
+    // ==========================================
+    // Form Properties
+    // ==========================================
+
+    /** @var string Service type code */
+    // public $code = '';
+
+    /** @var string Service type name */
+    public $name = '';
+
+    /** @var string Service type description */
     public $description = '';
+
+    /** @var int|null Department ID */
+    public $department_id = null;
+
+    /** @var bool Active status */
     public $is_active = true;
 
-    // View detail properties
-    public $viewServiceType;
+    // ==========================================
+    // Selection Properties
+    // ==========================================
 
-    // Available departments
-    public $departments = [];
+    /** @var array Selected item IDs */
+    public $selectedItems = [];
 
-    // Filter properties
-    public $filterDepartment = '';
-    public $filterStatus = '';
+    /** @var bool Select all checkbox */
+    public $selectAll = false;
+
+    // ==========================================
+    // View Offcanvas Properties
+    // ==========================================
+
+    /** @var bool Show view offcanvas */
+    public $showOffcanvas = false;
+
+    /** @var ServiceType|null Service type being viewed */
+    public $viewServiceType = null;
+
+    // ==========================================
+    // Delete Modal Properties
+    // ==========================================
+
+    /** @var int|null Service type ID to delete */
+    public $deleteId = null;
+
+    /** @var bool Show delete confirmation modal */
+    public $showDeleteModal = false;
+
+    /** @var string Pagination theme */
+    protected $paginationTheme = 'bootstrap';
+
+    // ==========================================
+    // Validation Rules
+    // ==========================================
 
     /**
-     * Mount the component
+     * Get validation rules
+     *
+     * @return array
      */
-    public function mount()
-    {
-        // Load departments based on user role
-        $user = Auth::user();
-
-        if ($user->isSuperAdmin()) {
-            $this->departments = Department::active()->get();
-        } else {
-            $this->departments = $user->departments;
-        }
-
-        // Auto-select department if user has only one
-        if ($this->departments->count() === 1) {
-            $this->department_id = $this->departments->first()->id;
-        }
-    }
-
-    /**
-     * Validation rules
-     */
-    protected function rules()
+    public function rules()
     {
         return [
+            // 'code' => 'required|string|max:20|unique:service_types,service_type,' . $this->serviceTypeId . ',id,department_id,' . $this->department_id,
+            'name' => 'required|string|max:100|unique:service_types,service_type,' . $this->serviceTypeId . ',id,department_id,' . $this->department_id,
+            'description' => 'nullable|string|max:500',
             'department_id' => 'required|exists:departments,id',
-            'service_type' => 'required|string|max:255',
-            'description' => 'nullable|string',
             'is_active' => 'boolean',
         ];
     }
 
     /**
-     * Custom attribute names
+     * Custom validation messages
+     *
+     * @return array
      */
-    protected $validationAttributes = [
-        'department_id' => 'department',
-        'service_type' => 'service type',
-    ];
-
-    /**
-     * Get query for data table
-     */
-    protected function getQuery()
+    public function messages()
     {
-        $user = Auth::user();
-
-        $query = ServiceType::with(['department'])
-            ->when(!$user->isSuperAdmin(), function ($q) use ($user) {
-                // Non-super admins only see service types from their departments
-                $q->whereIn('department_id', $user->getDepartmentIds());
-            })
-            ->when($this->search, function ($q) {
-                $q->where(function ($query) {
-                    $query->where('service_type', 'like', '%' . $this->search . '%')
-                        ->orWhere('description', 'like', '%' . $this->search . '%');
-                });
-            })
-            ->when($this->filterDepartment, function ($q) {
-                $q->where('department_id', $this->filterDepartment);
-            })
-            ->when($this->filterStatus !== '', function ($q) {
-                $q->where('is_active', $this->filterStatus);
-            })
-            ->orderBy($this->sortField, $this->sortDirection);
-
-        return $query;
+        return [
+            'department_id.required' => 'Please select a department.',
+            'department_id.exists' => 'Selected department is invalid.',
+        ];
     }
 
+    // ==========================================
+    // Lifecycle Hooks
+    // ==========================================
+
     /**
-     * Reset filters
+     * Reset pagination when search changes
      */
-    public function resetFilters()
+    public function updatedSearch()
     {
-        $this->filterDepartment = '';
-        $this->filterStatus = '';
-        $this->search = '';
         $this->resetPage();
     }
 
     /**
+     * Reset pagination when status filter changes
+     */
+    public function updatedStatusFilter()
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when department filter changes
+     */
+    public function updatedDepartmentFilter()
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Reset pagination when per page changes
+     */
+    public function updatedPerPage()
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * Handle select all checkbox change
+     *
+     * @param bool $value
+     */
+    public function updatedSelectAll($value)
+    {
+        if ($value) {
+            $this->selectedItems = $this->getServiceTypesProperty()->pluck('id')->map(fn($id) => (string) $id)->toArray();
+        } else {
+            $this->selectedItems = [];
+        }
+    }
+
+    // ==========================================
+    // Sorting Methods
+    // ==========================================
+
+    /**
+     * Sort by field
+     *
+     * @param string $field
+     */
+    public function sortBy($field)
+    {
+        if ($this->sortField === $field) {
+            $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortField = $field;
+            $this->sortDirection = 'asc';
+        }
+    }
+
+    // ==========================================
+    // Modal Methods
+    // ==========================================
+
+    /**
      * Open modal for creating new service type
      */
-    public function create()
+    public function openModal()
     {
         $this->resetForm();
-        $this->resetValidation();
-        $this->dispatch('openModal');
+        $this->editMode = false;
+        $this->showModal = true;
+    }
+
+    /**
+     * Close add/edit modal
+     */
+    public function closeModal()
+    {
+        $this->showModal = false;
+        $this->resetForm();
     }
 
     /**
      * Open modal for editing service type
+     *
+     * @param int $id
      */
     public function edit($id)
     {
+        $this->resetForm();
         $serviceType = ServiceType::findOrFail($id);
 
-        // Check if user can edit this service type
-        if (!Auth::user()->isSuperAdmin() && !Auth::user()->belongsToDepartment($serviceType->department_id)) {
-            session()->flash('error', 'You do not have permission to edit this service type.');
-            return;
-        }
-
         $this->serviceTypeId = $serviceType->id;
-        $this->department_id = $serviceType->department_id;
-        $this->service_type = $serviceType->service_type;
+        // $this->code = ''; // Not used, but keep for form compatibility
+        $this->name = $serviceType->service_type; // Get from service_type field
         $this->description = $serviceType->description;
+        $this->department_id = $serviceType->department_id;
         $this->is_active = $serviceType->is_active;
 
-        $this->resetValidation();
-        $this->dispatch('openModal');
+        $this->editMode = true;
+        $this->showModal = true;
+    }
+
+    // ==========================================
+    // Offcanvas Methods
+    // ==========================================
+
+    /**
+     * Open offcanvas to view service type details
+     *
+     * @param int $id
+     */
+    public function view($id)
+    {
+        $this->viewServiceType = ServiceType::with(['department', 'creator', 'updater', 'tickets'])->findOrFail($id);
+        $this->showOffcanvas = true;
     }
 
     /**
-     * Save service type
+     * Close view offcanvas
+     */
+    public function closeOffcanvas()
+    {
+        $this->showOffcanvas = false;
+        $this->viewServiceType = null;
+    }
+
+    // ==========================================
+    // Delete Methods
+    // ==========================================
+
+    /**
+     * Show delete confirmation modal
+     *
+     * @param int $id
+     */
+    public function confirmDelete($id)
+    {
+        $this->deleteId = $id;
+        $this->showDeleteModal = true;
+    }
+
+    /**
+     * Cancel delete operation
+     */
+    public function cancelDelete()
+    {
+        $this->deleteId = null;
+        $this->showDeleteModal = false;
+    }
+
+    // ==========================================
+    // CRUD Operations
+    // ==========================================
+
+    /**
+     * Save service type (create or update)
      */
     public function save()
     {
         $this->validate();
+        // dd('validate passed');
 
         try {
+            // Prepare data - note: ServiceType model uses 'service_type' field, not 'code' and 'name'
             $data = [
-                'department_id' => $this->department_id,
-                'service_type' => $this->service_type,
+                'service_type' => $this->name, // Store name in service_type field
                 'description' => $this->description,
+                'department_id' => $this->department_id,
                 'is_active' => $this->is_active,
             ];
 
-            if ($this->serviceTypeId) {
+            if ($this->editMode) {
                 // Update existing service type
                 $serviceType = ServiceType::findOrFail($this->serviceTypeId);
-
-                // Check permission
-                if (!Auth::user()->isSuperAdmin() && !Auth::user()->belongsToDepartment($serviceType->department_id)) {
-                    session()->flash('error', 'You do not have permission to edit this service type.');
-                    return;
-                }
-
-                $data['updated_by'] = Auth::id();
+                $data['updated_by'] = auth()->id();
                 $serviceType->update($data);
-                $message = 'Service type updated successfully.';
+
+                $this->dispatch('toast', type: 'success', message: 'Service Type updated successfully!');
             } else {
                 // Create new service type
-                $data['created_by'] = Auth::id();
+                $data['created_by'] = auth()->id();
                 ServiceType::create($data);
-                $message = 'Service type created successfully.';
+
+                $this->dispatch('toast', type: 'success', message: 'Service Type created successfully!');
             }
 
-            session()->flash('success', $message);
-            $this->dispatch('closeModal');
-            $this->resetForm();
-        } catch (\Exception $e) {
-            session()->flash('error', 'Error: ' . $e->getMessage());
-        }
-    }
+            $this->closeModal();
 
-    /**
-     * View service type details
-     */
-    public function view($id)
-    {
-        $this->viewServiceType = ServiceType::with(['department', 'creator', 'updater'])->findOrFail($id);
-        $this->dispatch('openOffcanvas');
+        } catch (\Exception $e) {
+            $this->dispatch('toast', type: 'error', message: 'An error occurred: ' . $e->getMessage());
+        }
     }
 
     /**
      * Delete service type
+     *
+     * @param int|null $id
      */
-    public function delete($id)
+    public function delete($id = null)
     {
+        $id = $id ?? $this->deleteId;
+
+        if (!$id) {
+            return;
+        }
+
         try {
             $serviceType = ServiceType::findOrFail($id);
 
-            // Check permission
-            if (!Auth::user()->isSuperAdmin() && !Auth::user()->belongsToDepartment($serviceType->department_id)) {
-                session()->flash('error', 'You do not have permission to delete this service type.');
+            // Check if service type is being used in tickets (not transactions)
+            $usageCount = $serviceType->tickets()->count();
+
+            if ($usageCount > 0) {
+                $this->dispatch('toast', type: 'error', message: "Cannot delete Service Type. It is being used in {$usageCount} ticket(s).");
+                $this->cancelDelete();
                 return;
             }
 
-            // Check if service type has tickets
-            if ($serviceType->tickets()->count() > 0) {
-                session()->flash('error', 'Cannot delete service type with existing tickets.');
-                return;
-            }
-
+            // Delete the service type
             $serviceType->delete();
-            session()->flash('success', 'Service type deleted successfully.');
+            $this->dispatch('toast', type: 'success', message: 'Service Type deleted successfully!');
+            $this->cancelDelete();
+
         } catch (\Exception $e) {
-            session()->flash('error', 'Error: ' . $e->getMessage());
+            $this->dispatch('toast', type: 'error', message: 'An error occurred: ' . $e->getMessage());
+            $this->cancelDelete();
         }
     }
 
     /**
-     * Toggle service type active status
+     * Delete selected service types
      */
-    public function toggleStatus($id)
+    public function deleteSelected()
     {
-        try {
-            $serviceType = ServiceType::findOrFail($id);
+        if (empty($this->selectedItems)) {
+            $this->dispatch('toast', type: 'warning', message: 'No items selected.');
+            return;
+        }
 
-            // Check permission
-            if (!Auth::user()->isSuperAdmin() && !Auth::user()->belongsToDepartment($serviceType->department_id)) {
-                session()->flash('error', 'You do not have permission to modify this service type.');
+        try {
+            // Check if any selected service type is being used
+            $usedServiceTypes = ServiceType::whereIn('id', $this->selectedItems)
+                ->withCount('tickets')
+                ->get()
+                ->filter(fn($serviceType) => $serviceType->tickets_count > 0);
+
+            if ($usedServiceTypes->count() > 0) {
+                $this->dispatch('toast', type: 'error', message: 'Some Service Types cannot be deleted as they are being used in tickets.');
                 return;
             }
 
-            $serviceType->update([
-                'is_active' => !$serviceType->is_active,
-                'updated_by' => Auth::id(),
-            ]);
+            // Delete selected service types
+            ServiceType::whereIn('id', $this->selectedItems)->delete();
+            $this->selectedItems = [];
+            $this->selectAll = false;
 
-            $status = $serviceType->is_active ? 'activated' : 'deactivated';
-            session()->flash('success', "Service type {$status} successfully.");
+            $this->dispatch('toast', type: 'success', message: 'Selected Service Types deleted successfully!');
 
-            if ($this->viewServiceType && $this->viewServiceType->id === $id) {
-                $this->viewServiceType = ServiceType::with(['department', 'creator', 'updater'])->findOrFail($id);
-            }
         } catch (\Exception $e) {
-            session()->flash('error', 'Error: ' . $e->getMessage());
+            $this->dispatch('toast', type: 'error', message: 'An error occurred: ' . $e->getMessage());
         }
     }
 
+    // ==========================================
+    // Helper Methods
+    // ==========================================
+
     /**
-     * Reset form
+     * Reset form fields
      */
     private function resetForm()
     {
         $this->serviceTypeId = null;
-        $this->department_id = $this->departments->count() === 1 ? $this->departments->first()->id : '';
-        $this->service_type = '';
+        // $this->code = '';
+        $this->name = '';
         $this->description = '';
+        $this->department_id = null;
         $this->is_active = true;
+        $this->resetValidation();
     }
 
     /**
-     * Render component
+     * Get filtered and paginated service types
+     *
+     * @return \Illuminate\Pagination\LengthAwarePaginator
+     */
+    public function getServiceTypesProperty()
+    {
+        return ServiceType::query()
+            // Search filter - search in service_type field
+            ->when($this->search, function ($query) {
+                $query->where(function ($q) {
+                    $q->where('service_type', 'like', '%' . $this->search . '%');
+                });
+            })
+            // Status filter
+            ->when($this->statusFilter !== '', function ($query) {
+                $isActive = $this->statusFilter === 'Active';
+                $query->where('is_active', $isActive);
+            })
+            // Department filter
+            ->when($this->departmentFilter, function ($query) {
+                $query->where('department_id', $this->departmentFilter);
+            })
+            // Load relationships
+            ->with('department')
+            ->withCount('tickets')
+            // Sorting - sort by service_type field
+            ->orderBy('service_type', $this->sortDirection)
+            // Pagination
+            ->paginate($this->perPage);
+    }
+
+    /**
+     * Get active departments for dropdown
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getDepartmentsProperty()
+    {
+        return Department::where('is_active', true)
+            ->orderBy('department')
+            ->get();
+    }
+
+    // ==========================================
+    // Render Method
+    // ==========================================
+
+    /**
+     * Render the component
+     *
+     * @return \Illuminate\View\View
      */
     public function render()
     {
-        return view('livewire.masters.service-types.service-type-list', [
-            'serviceTypes' => $this->getData(),
-        ])->extends('admin.layout', [
-            'pageTitle' => 'Service Types',
+        $serviceTypes = $this->getServiceTypesProperty();
+        $departments = $this->getDepartmentsProperty();
+
+        // Get statistics
+        $stats = [
+            'total' => ServiceType::count(),
+            'active' => ServiceType::where('is_active', true)->count(),
+            'inactive' => ServiceType::where('is_active', false)->count(),
+        ];
+
+        return view('livewire.masters.service-types.index', [
+            'serviceTypes' => $serviceTypes,
+            'departments' => $departments,
+            'stats' => $stats,
+            'title' => 'Service Type Management',
         ]);
     }
 }

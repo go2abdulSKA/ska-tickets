@@ -2,6 +2,7 @@
 
 use App\Livewire\Masters\UOM\UOMList;
 use Illuminate\Support\Facades\Route;
+use App\Livewire\Masters\User\UserList;
 use App\Livewire\Masters\Client\ClientList;
 use App\Livewire\Masters\Department\DepartmentList;
 use App\Livewire\Masters\CostCenters\CostCenterList;
@@ -69,11 +70,14 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
         // });
 
         // Users
-        Route::prefix('users')->name('users.')->group(function () {
-            Route::get('/', function () {
-                return view('admin.coming-soon', ['title' => 'Users']);
-            })->name('index');
-        });
+
+        Route::get('/user', UserList::class)->name('user');
+
+        // Route::prefix('users')->name('users.')->group(function () {
+        //     Route::get('/', function () {
+        //         return view('admin.coming-soon', ['title' => 'Users']);
+        //     })->name('index');
+        // });
 
         // Clients
 

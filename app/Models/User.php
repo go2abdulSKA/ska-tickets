@@ -49,6 +49,7 @@ class User extends Authenticatable
         'address',
         'country',
         'profile_photo',
+        'profile_photo_path',
         'is_active',
         'two_factor_enabled',
         'created_by',

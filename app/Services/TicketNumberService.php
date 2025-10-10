@@ -18,17 +18,17 @@ class TicketNumberService
         return DB::transaction(function () use ($departmentId) {
             // Get department with lock
             $department = Department::lockForUpdate()->findOrFail($departmentId);
-            
+
             // Get or create ticket number counter with lock
             $ticketNumber = TicketNumber::lockForUpdate()
                 ->firstOrCreate(
                     ['department_id' => $departmentId],
                     ['last_used' => 0]
                 );
-            
+
             // Generate next number
             $nextNumber = $ticketNumber->getNextNumber($department->prefix);
-            
+
             return $nextNumber;
         }, 5); // 5 retry attempts
     }
@@ -43,9 +43,9 @@ class TicketNumberService
             $department = Department::lockForUpdate()->findOrFail($departmentId);
             $ticketNumber = TicketNumber::lockForUpdate()
                 ->firstOrCreate(['department_id' => $departmentId], ['last_used' => 0]);
-            
+
             $number = $ticketNumber->getNextNumber($department->prefix);
-            
+
             return [
                 'number' => $number,
                 'prefix' => $department->prefix,
@@ -64,7 +64,7 @@ class TicketNumberService
             ['department_id' => $departmentId],
             ['last_used' => 0]
         );
-        
+
         return $ticketNumber->getNextNumberPreview($department->prefix);
     }
 }

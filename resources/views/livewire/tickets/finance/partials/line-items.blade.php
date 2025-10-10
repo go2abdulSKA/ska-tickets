@@ -33,8 +33,8 @@
             <h5 class="mb-0">Line Items</h5>
             <p class="mb-0 text-muted small">Add services or items with quantities and prices</p>
         </div>
-        <button type="button" 
-                @click="addLine()" 
+        <button type="button"
+                @click="addLine()"
                 class="btn btn-primary btn-sm">
             <i class="mdi mdi-plus me-1"></i> Add Line Item
         </button>
@@ -64,11 +64,11 @@
 
                         {{-- Description --}}
                         <td>
-                            <textarea 
+                            <textarea
                                 wire:model.live.debounce.300ms="transactions.{{ $index }}.description"
-                                class="form-control form-control-sm" 
-                                rows="2" 
-                                placeholder="Enter service description..." 
+                                class="form-control form-control-sm"
+                                rows="1"
+                                placeholder="Enter service description..."
                                 maxlength="500"></textarea>
                             @error("transactions.{$index}.description")
                                 <small class="text-danger">{{ $message }}</small>
@@ -77,11 +77,11 @@
 
                         {{-- Quantity --}}
                         <td>
-                            <input type="number" 
+                            <input type="number"
                                    wire:model.live.debounce.300ms="transactions.{{ $index }}.qty"
                                    wire:change="calculateLineItemTotal({{ $index }})"
-                                   class="form-control form-control-sm text-end" 
-                                   step="0.001" 
+                                   class="form-control form-control-sm text-end"
+                                   step="0.001"
                                    min="0.001"
                                    placeholder="1.000">
                             @error("transactions.{$index}.qty")
@@ -99,9 +99,9 @@
                                         <option value="{{ $uom->id }}">{{ $uom->code }}</option>
                                     @endforeach
                                 </select>
-                                <button type="button" 
+                                <button type="button"
                                         wire:click="openQuickAddUOM"
-                                        class="btn btn-outline-secondary btn-sm" 
+                                        class="btn btn-outline-secondary btn-sm"
                                         title="Add UOM">
                                     <i class="mdi mdi-plus"></i>
                                 </button>
@@ -113,11 +113,11 @@
 
                         {{-- Unit Cost --}}
                         <td>
-                            <input type="number" 
+                            <input type="number"
                                    wire:model.live.debounce.300ms="transactions.{{ $index }}.unit_cost"
                                    wire:change="calculateLineItemTotal({{ $index }})"
-                                   class="form-control form-control-sm text-end" 
-                                   step="0.01" 
+                                   class="form-control form-control-sm text-end"
+                                   step="0.01"
                                    min="0"
                                    placeholder="0.00">
                             @error("transactions.{$index}.unit_cost")
@@ -133,13 +133,13 @@
                         {{-- Actions --}}
                         <td class="text-center align-middle">
                             <div class="btn-group btn-group-sm">
-                                <button type="button" 
+                                <button type="button"
                                         wire:click="duplicateLineItem({{ $index }})"
                                         class="btn btn-outline-info"
                                         title="Duplicate">
                                     <i class="mdi mdi-content-copy"></i>
                                 </button>
-                                <button type="button" 
+                                <button type="button"
                                         wire:click="removeLineItem({{ $index }})"
                                         class="btn btn-outline-danger"
                                         title="Remove"
@@ -161,13 +161,13 @@
                 <div class="py-2 card-header bg-light d-flex justify-content-between align-items-center">
                     <span class="fw-bold">Item #{{ $index + 1 }}</span>
                     <div class="btn-group btn-group-sm">
-                        <button type="button" 
+                        <button type="button"
                                 wire:click="duplicateLineItem({{ $index }})"
                                 class="btn btn-outline-info btn-sm"
                                 title="Duplicate">
                             <i class="mdi mdi-content-copy"></i>
                         </button>
-                        <button type="button" 
+                        <button type="button"
                                 wire:click="removeLineItem({{ $index }})"
                                 class="btn btn-outline-danger btn-sm"
                                 title="Remove"
@@ -183,11 +183,11 @@
                         <label class="form-label small fw-bold">
                             Description <span class="text-danger">*</span>
                         </label>
-                        <textarea 
+                        <textarea
                             wire:model.live.debounce.300ms="transactions.{{ $index }}.description"
-                            class="form-control form-control-sm" 
-                            rows="3" 
-                            placeholder="Enter service description..." 
+                            class="form-control form-control-sm"
+                            rows="3"
+                            placeholder="Enter service description..."
                             maxlength="500"></textarea>
                     </div>
 
@@ -197,11 +197,11 @@
                             <label class="form-label small fw-bold">
                                 Qty <span class="text-danger">*</span>
                             </label>
-                            <input type="number" 
+                            <input type="number"
                                    wire:model.live.debounce.300ms="transactions.{{ $index }}.qty"
                                    wire:change="calculateLineItemTotal({{ $index }})"
-                                   class="form-control form-control-sm text-end" 
-                                   step="0.001" 
+                                   class="form-control form-control-sm text-end"
+                                   step="0.001"
                                    min="0.001"
                                    placeholder="1.000">
                         </div>
@@ -217,7 +217,7 @@
                                         <option value="{{ $uom->id }}">{{ $uom->code }}</option>
                                     @endforeach
                                 </select>
-                                <button type="button" 
+                                <button type="button"
                                         wire:click="openQuickAddUOM"
                                         class="btn btn-outline-secondary btn-sm">
                                     <i class="mdi mdi-plus"></i>
@@ -232,11 +232,11 @@
                             <label class="form-label small fw-bold">
                                 Unit Cost <span class="text-danger">*</span>
                             </label>
-                            <input type="number" 
+                            <input type="number"
                                    wire:model.live.debounce.300ms="transactions.{{ $index }}.unit_cost"
                                    wire:change="calculateLineItemTotal({{ $index }})"
-                                   class="form-control form-control-sm text-end" 
-                                   step="0.01" 
+                                   class="form-control form-control-sm text-end"
+                                   step="0.01"
                                    min="0"
                                    placeholder="0.00">
                         </div>
@@ -252,8 +252,8 @@
         @endforeach
 
         {{-- Add Line Button (Mobile) --}}
-        <button type="button" 
-                wire:click="addLineItem" 
+        <button type="button"
+                wire:click="addLineItem"
                 class="mb-3 btn btn-primary w-100">
             <i class="mdi mdi-plus me-1"></i> Add Another Line Item
         </button>

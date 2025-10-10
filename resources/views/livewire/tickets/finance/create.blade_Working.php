@@ -1,8 +1,7 @@
 {{-- resources/views/livewire/tickets/finance/create.blade.php --}}
 
-{{-- <div x-data="financeTicketForm()" x-init="init()"> --}}
+<div x-data="financeTicketForm()" x-init="init()">
 
-<div>
     {{-- Page Header --}}
     <div class="mb-4 page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -189,6 +188,19 @@
         @livewire('masters.service-types.quick-add-service-type', ['departmentId' => $department_id], key('quick-service-' . $department_id))
     @endif
 
+    {{-- Quick Add Modals --}}
+    {{-- @if ($showQuickAddClient)
+        @livewire('masters.client.quick-add-client', ['departmentId' => $department_id])
+    @endif
+
+    @if ($showQuickAddUOM)
+        @livewire('masters.uom.quick-add-uom')
+    @endif
+
+    @if ($showQuickAddServiceType)
+        @livewire('masters.service-types.quick-add-service-type', ['departmentId' => $department_id])
+    @endif --}}
+
 </div>
 
 {{-- Styles --}}
@@ -234,7 +246,7 @@
     </style>
 @endpush
 
-{{-- AutoSave Scripts --}}
+{{-- Scripts --}}
 @push('scripts')
     <script>
         function financeTicketForm() {

@@ -1,7 +1,8 @@
 
 
-<div x-data="financeTicketForm()" x-init="init()">
 
+
+<div>
     
     <div class="mb-4 page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
@@ -235,9 +236,6 @@ unset($__split);
 if (isset($__slots)) unset($__slots);
 ?>
     <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-
-    
-    
 
 </div>
 

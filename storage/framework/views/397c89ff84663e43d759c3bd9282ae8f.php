@@ -124,38 +124,45 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
                 Client <span class="text-danger">*</span>
             </label>
             <div class="input-group">
-                <select wire:model.live="client_id"
-                    class="form-select searchable-select <?php $__errorArgs = ['client_id'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>" id="client_id"
-                    data-placeholder="Search clients..." <?php if(!$department_id): ?> disabled <?php endif; ?>>
-                    <option value="">
-                        <!--[if BLOCK]><![endif]--><?php if(!$department_id): ?>
-                            -- Select Department First --
-                        <?php else: ?>
-                            -- Search & Select Client --
-                        <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-                    </option>
-                    <!--[if BLOCK]><![endif]--><?php if($department_id): ?>
-                        <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $clients; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $client): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                            <option value="<?php echo e($client->id); ?>">
-                                <?php echo e($client->client_name); ?>
+                <?php
+                    $clientOptions = [];
+                    if ($department_id && $clients) {
+                        $clientOptions = $clients
+                            ->map(function ($client) {
+                                return [
+                                    'value' => $client->id,
+                                    'label' =>
+                                        $client->client_name .
+                                        ($client->company_name ? ' - ' . $client->company_name : ''),
+                                ];
+                            })
+                            ->toArray();
+                    }
+                ?>
 
-                                <!--[if BLOCK]><![endif]--><?php if($client->company_name): ?>
-                                    - <?php echo e($client->company_name); ?>
+                <?php if (isset($component)) { $__componentOriginala8477b4ecee8eec802e9913415383e3a = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala8477b4ecee8eec802e9913415383e3a = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.ui.searchable-select','data' => ['id' => 'client_id','wireModel' => 'client_id','options' => $clientOptions,'placeholder' => ''.e(!$department_id ? 'Select Department First' : 'Search clients...').'','disabled' => !$department_id]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('ui.searchable-select'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['id' => 'client_id','wire-model' => 'client_id','options' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($clientOptions),'placeholder' => ''.e(!$department_id ? 'Select Department First' : 'Search clients...').'','disabled' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(!$department_id)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala8477b4ecee8eec802e9913415383e3a)): ?>
+<?php $attributes = $__attributesOriginala8477b4ecee8eec802e9913415383e3a; ?>
+<?php unset($__attributesOriginala8477b4ecee8eec802e9913415383e3a); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala8477b4ecee8eec802e9913415383e3a)): ?>
+<?php $component = $__componentOriginala8477b4ecee8eec802e9913415383e3a; ?>
+<?php unset($__componentOriginala8477b4ecee8eec802e9913415383e3a); ?>
+<?php endif; ?>
 
-                                <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-                            </option>
-                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
-                    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-                </select>
-                <button type="button" wire:click="openQuickAddClient" class="btn btn-outline-primary"
-                    title="Add New Client" <?php if(!$department_id): ?> disabled <?php endif; ?>>
+                <button type="button" wire:click="openQuickAddClient" class="btn btn-primary" title="Add New Client"
+                    <?php if(!$department_id): ?> disabled <?php endif; ?>>
                     <i class="mdi mdi-plus"></i>
                 </button>
             </div>
@@ -176,36 +183,105 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
     <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
 
     
+    <!--[if BLOCK]><![endif]--><?php if($client_type === 'cost_center'): ?>
+        <div class="col-md-6">
+            <label for="cost_center_id" class="form-label">
+                Cost Center <span class="text-danger">*</span>
+            </label>
+            <?php
+                $costCenterOptions = [];
+                if ($costCenters) {
+                    $costCenterOptions = $costCenters
+                        ->map(function ($cc) {
+                            return [
+                                'value' => $cc->id,
+                                'label' => $cc->code . ' - ' . $cc->name,
+                            ];
+                        })
+                        ->toArray();
+                }
+            ?>
+
+            <?php if (isset($component)) { $__componentOriginala8477b4ecee8eec802e9913415383e3a = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala8477b4ecee8eec802e9913415383e3a = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.ui.searchable-select','data' => ['id' => 'cost_center_id','wireModel' => 'cost_center_id','options' => $costCenterOptions,'placeholder' => ''.e(!$department_id ? 'Select Department First' : 'Search cost centers...').'','disabled' => !$department_id]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('ui.searchable-select'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['id' => 'cost_center_id','wire-model' => 'cost_center_id','options' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($costCenterOptions),'placeholder' => ''.e(!$department_id ? 'Select Department First' : 'Search cost centers...').'','disabled' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(!$department_id)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala8477b4ecee8eec802e9913415383e3a)): ?>
+<?php $attributes = $__attributesOriginala8477b4ecee8eec802e9913415383e3a; ?>
+<?php unset($__attributesOriginala8477b4ecee8eec802e9913415383e3a); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala8477b4ecee8eec802e9913415383e3a)): ?>
+<?php $component = $__componentOriginala8477b4ecee8eec802e9913415383e3a; ?>
+<?php unset($__componentOriginala8477b4ecee8eec802e9913415383e3a); ?>
+<?php endif; ?>
+
+            <!--[if BLOCK]><![endif]--><?php $__errorArgs = ['cost_center_id'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                <div class="invalid-feedback d-block"><?php echo e($message); ?></div>
+            <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
+            <!--[if BLOCK]><![endif]--><?php if(!$department_id): ?>
+                <small class="text-muted">Please select a department first</small>
+            <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+
+        </div>
+    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+
+    
     <div class="col-md-6">
         <label for="service_type_id" class="form-label">
             Service Type
         </label>
         <div class="input-group">
-            <select wire:model.live="service_type_id"
-                class="form-select searchable-select <?php $__errorArgs = ['service_type_id'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>"
-                id="service_type_id" data-placeholder="Search service types..."
-                <?php if(!$department_id): ?> disabled <?php endif; ?>>
-                <option value="">
-                    <!--[if BLOCK]><![endif]--><?php if(!$department_id): ?>
-                        -- Select Department First --
-                    <?php else: ?>
-                        -- Search & Select Service Type --
-                    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-                </option>
-                <!--[if BLOCK]><![endif]--><?php if($department_id): ?>
-                    <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $serviceTypes; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $st): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                        <option value="<?php echo e($st->id); ?>"><?php echo e($st->service_type); ?></option>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
-                <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-            </select>
-            <button type="button" wire:click="openQuickAddServiceType" class="btn btn-outline-primary"
+            <?php
+                $serviceTypeOptions = [];
+                if ($department_id && $serviceTypes) {
+                    $serviceTypeOptions = $serviceTypes
+                        ->map(function ($st) {
+                            return [
+                                'value' => $st->id,
+                                'label' => $st->service_type,
+                            ];
+                        })
+                        ->toArray();
+                }
+            ?>
+
+            <?php if (isset($component)) { $__componentOriginala8477b4ecee8eec802e9913415383e3a = $component; } ?>
+<?php if (isset($attributes)) { $__attributesOriginala8477b4ecee8eec802e9913415383e3a = $attributes; } ?>
+<?php $component = Illuminate\View\AnonymousComponent::resolve(['view' => 'components.ui.searchable-select','data' => ['id' => 'service_type_id','wireModel' => 'service_type_id','options' => $serviceTypeOptions,'placeholder' => ''.e(!$department_id ? 'Select Department First' : 'Search service types...').'','disabled' => !$department_id]] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>
+<?php $component->withName('ui.searchable-select'); ?>
+<?php if ($component->shouldRender()): ?>
+<?php $__env->startComponent($component->resolveView(), $component->data()); ?>
+<?php if (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag): ?>
+<?php $attributes = $attributes->except(\Illuminate\View\AnonymousComponent::ignoredParameterNames()); ?>
+<?php endif; ?>
+<?php $component->withAttributes(['id' => 'service_type_id','wire-model' => 'service_type_id','options' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute($serviceTypeOptions),'placeholder' => ''.e(!$department_id ? 'Select Department First' : 'Search service types...').'','disabled' => \Illuminate\View\Compilers\BladeCompiler::sanitizeComponentAttribute(!$department_id)]); ?>
+<?php echo $__env->renderComponent(); ?>
+<?php endif; ?>
+<?php if (isset($__attributesOriginala8477b4ecee8eec802e9913415383e3a)): ?>
+<?php $attributes = $__attributesOriginala8477b4ecee8eec802e9913415383e3a; ?>
+<?php unset($__attributesOriginala8477b4ecee8eec802e9913415383e3a); ?>
+<?php endif; ?>
+<?php if (isset($__componentOriginala8477b4ecee8eec802e9913415383e3a)): ?>
+<?php $component = $__componentOriginala8477b4ecee8eec802e9913415383e3a; ?>
+<?php unset($__componentOriginala8477b4ecee8eec802e9913415383e3a); ?>
+<?php endif; ?>
+
+            <button type="button" wire:click="openQuickAddServiceType" class="btn btn-primary"
                 title="Add New Service Type" <?php if(!$department_id): ?> disabled <?php endif; ?>>
                 <i class="mdi mdi-plus"></i>
             </button>
@@ -224,51 +300,6 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
             <small class="text-muted">Please select a department first</small>
         <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
     </div>
-
-
-    
-    <!--[if BLOCK]><![endif]--><?php if($client_type === 'cost_center'): ?>
-        <div class="col-md-6">
-            <label for="cost_center_id" class="form-label">
-                Cost Center <span class="text-danger">*</span>
-            </label>
-            <select wire:model.live="cost_center_id" class="form-select <?php $__errorArgs = ['cost_center_id'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>"
-                id="cost_center_id">
-                <option value="">-- Select Cost Center --</option>
-                <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $costCenters; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $cc): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                    <option value="<?php echo e($cc->id); ?>"><?php echo e($cc->code); ?> - <?php echo e($cc->name); ?></option>
-                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
-            </select>
-            <!--[if BLOCK]><![endif]--><?php $__errorArgs = ['cost_center_id'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?>
-                <div class="invalid-feedback"><?php echo e($message); ?></div>
-            <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
-        </div>
-    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
-
-
-    
-    
-
-    
-    
-
-    
-    
-
 
     
     <div class="col-12">
@@ -419,7 +450,7 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
     
     <div class="col-md-4">
         <label for="ref_no" class="form-label">Reference No</label>
-        <input type="text" wire:model.blur="ref_no" class="form-control <?php $__errorArgs = ['ref_no'];
+        <input type="text" value='oldvalue' wire:model.blur="ref_no" class="form-control <?php $__errorArgs = ['ref_no'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
 if (isset($message)) { $__messageOriginal = $message; }
@@ -442,115 +473,10 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
 
 </div>
 
-<?php $__env->startPush('scripts'); ?>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        initSearchableSelects();
-    });
 
-    // Reinitialize after Livewire updates
-    document.addEventListener('livewire:update', function() {
-        initSearchableSelects();
-    });
 
-    function initSearchableSelects() {
-        // Destroy existing instances first
-        document.querySelectorAll('.searchable-select').forEach(function(select) {
-            if (select.tomselect) {
-                select.tomselect.destroy();
-            }
-        });
 
-        // Initialize Tom Select on all searchable selects
-        document.querySelectorAll('.searchable-select').forEach(function(select) {
-            if (!select.disabled) {
-                new TomSelect(select, {
-                    create: false,
-                    sortField: {
-                        field: "text",
-                        direction: "asc"
-                    },
-                    placeholder: select.dataset.placeholder || 'Search...',
-                    plugins: ['dropdown_input'],
-                    onItemAdd: function(value, item) {
-                        // Trigger Livewire update
-                        this.wrapper.querySelector('select').dispatchEvent(new Event('change', { bubbles: true }));
-                    },
-                    onClear: function() {
-                        // Trigger Livewire update on clear
-                        this.wrapper.querySelector('select').dispatchEvent(new Event('change', { bubbles: true }));
-                    },
-                    maxOptions: 500, // Show up to 500 options
-                    render: {
-                        no_results: function(data, escape) {
-                            return '<div class="no-results">No results found for "' + escape(data.input) + '"</div>';
-                        },
-                    }
-                });
-            }
-        });
-    }
 
-    // Listen for client/service type creation events to refresh
-    Livewire.on('client-created', () => {
-        setTimeout(() => {
-            initSearchableSelects();
-        }, 100);
-    });
 
-    Livewire.on('service-type-created', () => {
-        setTimeout(() => {
-            initSearchableSelects();
-        }, 100);
-    });
-</script>
-<?php $__env->stopPush(); ?>
 
-<?php $__env->startPush('styles'); ?>
-<style>
-    /* Custom styling for Tom Select */
-    .ts-wrapper {
-        width: 100% !important;
-    }
-
-    .ts-control {
-        min-height: 38px !important;
-        border-radius: 0.25rem !important;
-        border-color: #dee2e6 !important;
-    }
-
-    .ts-control:focus {
-        border-color: #86b7fe !important;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
-    }
-
-    .input-group .ts-wrapper {
-        flex: 1 1 auto;
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-    }
-
-    .input-group .ts-wrapper .ts-control {
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-    }
-
-    .ts-dropdown {
-        border-color: #dee2e6 !important;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
-
-    .no-results {
-        padding: 8px 12px;
-        color: #6c757d;
-        text-align: center;
-    }
-
-    /* Fix for disabled state */
-    select:disabled + .ts-wrapper {
-        pointer-events: none;
-        opacity: 0.6;
-    }
-</style>
-<?php $__env->stopPush(); ?>
 <?php /**PATH C:\xampp\htdocs\ska-tickets\resources\views/livewire/tickets/finance/partials/header-form.blade.php ENDPATH**/ ?>

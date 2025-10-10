@@ -1,8 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 
+
     <!-- Page Header -->
-    <?php echo $__env->make('admin.partials.header', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <head>
+
+        <?php echo $__env->make('admin.partials.header', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+        <?php echo $__env->yieldPushContent('styles'); ?>
+
+        <!-- Livewire Styles -->
+        <?php echo \Livewire\Mechanisms\FrontendAssets\FrontendAssets::styles(); ?>
+
+
+    </head>
     <!-- Page Header End-->
 
     <body>
@@ -42,18 +53,23 @@
             <!-- End of Main Content -->
             <!-- ============================================================== -->
 
-
             <!-- Theme Settings -->
             
 
         </div>
         <!-- END wrapper -->
 
-        <!-- Scripts -->
-        <?php echo \Livewire\Mechanisms\FrontendAssets\FrontendAssets::scripts(); ?>
+        
+        
 
+        <?php echo $__env->yieldPushContent('scripts'); ?>
 
         <?php echo $__env->make('admin.partials.scripts', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+
+
+        <!-- Livewire Scripts -->
+        <?php echo \Livewire\Mechanisms\FrontendAssets\FrontendAssets::scripts(); ?>
+
 
     </body>
 

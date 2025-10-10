@@ -55,7 +55,7 @@ class ViewFinanceTicket extends Component
     public function downloadAttachment($attachmentId)
     {
         $attachment = $this->ticket->attachments()->find($attachmentId);
-        
+
         if (!$attachment) {
             $this->dispatch('toast', type: 'error', message: 'Attachment not found.');
             return;

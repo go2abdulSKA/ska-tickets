@@ -1,4 +1,3 @@
-<head>
     <meta charset="utf-8" />
     {{-- <title>{{ config('app.name') }} - @yield('title', 'Admin Panel')</title> --}}
     <title>{{ config('app.name') }} - {{ $title ?? 'Admin Panel' }}</title>
@@ -10,6 +9,8 @@
     <!-- App favicon -->
     <link rel="shortcut icon" href="{{ asset('backend/assets/images/favicon.ico') }}" />
 
+    @stack('HeadTop')
+        
     <!-- Theme Config Js -->
     <script src="{{ asset('backend/assets/js/config.js') }}"></script>
 
@@ -20,17 +21,14 @@
     <link href="{{ asset('backend/assets/css/app.min.css') }}" rel="stylesheet" type="text/css" />
 
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    {{-- <link rel="preconnect" href="https://fonts.bunny.net"> --}}
+    {{-- <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" /> --}}
 
     {{-- Tom Select --}}
-    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
+    {{-- <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet"> --}}
 
     <!-- Scripts -->
     {{-- @vite(['resources/css/app.css', 'resources/js/app.js']) --}}
-
-    <!-- Styles -->
-    @livewireStyles
 
     {{-- <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -41,7 +39,3 @@
             }
         });
     </script> --}}
-
-
-</head>
-<!-- End Page Header -->

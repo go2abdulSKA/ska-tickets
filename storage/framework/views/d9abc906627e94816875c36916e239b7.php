@@ -1,4 +1,3 @@
-<head>
     <meta charset="utf-8" />
     
     <title><?php echo e(config('app.name')); ?> - <?php echo e($title ?? 'Admin Panel'); ?></title>
@@ -10,6 +9,8 @@
     <!-- App favicon -->
     <link rel="shortcut icon" href="<?php echo e(asset('backend/assets/images/favicon.ico')); ?>" />
 
+    <?php echo $__env->yieldPushContent('HeadTop'); ?>
+        
     <!-- Theme Config Js -->
     <script src="<?php echo e(asset('backend/assets/js/config.js')); ?>"></script>
 
@@ -20,22 +21,14 @@
     <link href="<?php echo e(asset('backend/assets/css/app.min.css')); ?>" rel="stylesheet" type="text/css" />
 
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+    
+    
 
     
-    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
+    
 
     <!-- Scripts -->
     
 
-    <!-- Styles -->
-    <?php echo \Livewire\Mechanisms\FrontendAssets\FrontendAssets::styles(); ?>
-
-
     
-
-
-</head>
-<!-- End Page Header -->
 <?php /**PATH C:\xampp\htdocs\ska-tickets\resources\views/admin/partials/header.blade.php ENDPATH**/ ?>

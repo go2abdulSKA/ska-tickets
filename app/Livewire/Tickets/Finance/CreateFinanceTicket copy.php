@@ -248,45 +248,16 @@ class CreateFinanceTicket extends Component
     // Step Navigation
     // ==========================================
 
-    // public function nextStep()
-    // {
-    //     // Validate current step before proceeding
-    //     if (!$this->validateCurrentStep()) {
-    //         return;
-    //     }
-
-    //     if ($this->currentStep < $this->totalSteps) {
-    //         $this->currentStep++;
-    //         $this->validatedSteps[] = $this->currentStep - 1;
-    //     }
-    // }
-
     public function nextStep()
     {
-        try {
-            // Validate current step
-            $this->validateCurrentStep();
+        // Validate current step before proceeding
+        if (!$this->validateCurrentStep()) {
+            return;
+        }
 
-            // Mark step as validated
-            $this->validatedSteps[] = $this->currentStep;
-
-            // Move to next step
-            if ($this->currentStep < $this->totalSteps) {
-                $this->currentStep++;
-            }
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Show validation errors in toast
-            $errors = $e->validator->errors()->all();
-            $errorMessage = implode("\n", $errors);
-
-            $this->dispatch('toast', [
-                'type' => 'error',
-                'message' => $errorMessage,
-                'title' => 'Validation Error',
-            ]);
-
-            // Re-throw to show field errors
-            throw $e;
+        if ($this->currentStep < $this->totalSteps) {
+            $this->currentStep++;
+            $this->validatedSteps[] = $this->currentStep - 1;
         }
     }
 
@@ -299,66 +270,110 @@ class CreateFinanceTicket extends Component
 
     public function goToStep($step)
     {
-        if ($this->currentStep < $step)    {
-        $this->validateCurrentStep();
-    $this->validatedSteps[] = $this->currentStep;
-        }
-
-
-            if ($step >= 1 && $step <= $this->totalSteps) {
-                // Can only jump to already validated steps or next step
-                $maxValidated = !empty($this->validatedSteps) ? max($this->validatedSteps) : 0;
-                if (in_array($step - 1, $this->validatedSteps) || $step <= $maxValidated + 2) {
-                    $this->currentStep = $step;
-                }
+        if ($step >= 1 && $step <= $this->totalSteps) {
+            // Can only jump to already validated steps or next step
+            if (in_array($step - 1, $this->validatedSteps) || $step <= max($this->validatedSteps) + 2) {
+                $this->currentStep = $step;
             }
+        }
     }
 
-    private function validateCurrentStep()
+    private function validateCurrentStep(): bool
     {
-        // dd($this);
+        try {
+            switch ($this->currentStep) {
+                case 1:
+                    // Validate step 1 fields
+                    $this->validate([
+                        'ticket_date' => 'required|date',
+                        'department_id' => 'required|exists:departments,id',
+                        'client_type' => 'required|in:client,cost_center',
+                        'service_type_id' => 'nullable|exists:service_types,id',
+                        'payment_type' => 'required|in:po,cash,credit_card,na',
+                        'currency' => 'required|in:usd,aed,euro,others',
+                    ]);
 
-        if ($this->currentStep === 1) {
-            $this->validate(
-                [
-                    'ticket_date' => 'required|date',
-                    'department_id' => 'required|exists:departments,id',
-                    'client_type' => 'required|in:client,cost_center',
-                    'client_id' => 'required_if:client_type,client|nullable|exists:clients,id',
-                    'cost_center_id' => 'required_if:client_type,cost_center|nullable|exists:cost_centers,id',
-                    'payment_type' => 'required|in:po,cash,credit_card,na',
-                    'currency' => 'required|in:usd,aed,euro,others',
-                ],
-                [
-                    'client_id.required_if' => 'Please select a client.',
-                    'cost_center_id.required_if' => 'Please select a cost center.',
-                    'ticket_date.required' => 'Ticket date is required.',
-                    'department_id.required' => 'Department is required.',
-                    'payment_type.required' => 'Payment type is required.',
-                    'currency.required' => 'Currency is required.',
-                ],
-            );
-        }
+                    // Conditional validation based on client type
+                    if ($this->client_type === ClientType::CLIENT->value) {
+                        $this->validate([
+                            'client_id' => 'required|exists:clients,id',
+                        ]);
+                    } else {
+                        $this->validate([
+                            'cost_center_id' => 'required|exists:cost_centers,id',
+                        ]);
+                    }
+                    break;
 
-        if ($this->currentStep === 2) {
-            $this->validate(
-                [
-                    'transactions' => 'required|array|min:1',
-                    'transactions.*.description' => 'required|string|max:500',
-                    'transactions.*.qty' => 'required|numeric|min:0',
-                    'transactions.*.uom_id' => 'required|exists:uom,id',
-                    'transactions.*.unit_cost' => 'required|numeric|min:0',
-                ],
-                [
-                    'transactions.required' => 'At least one transaction is required.',
-                    'transactions.*.description.required' => 'Description is required for all items.',
-                    'transactions.*.qty.required' => 'Quantity is required for all items.',
-                    'transactions.*.uom_id.required' => 'UOM is required for all items.',
-                    'transactions.*.unit_cost.required' => 'Unit cost is required for all items.',
-                ],
-            );
+                case 2:
+                    $this->validate([
+                        'transactions' => 'required|array|min:1',
+                        'transactions.*.description' => 'required|string|max:500',
+                        'transactions.*.qty' => 'required|numeric|min:0.001',
+                        'transactions.*.uom_id' => 'required|exists:uom,id',
+                        'transactions.*.unit_cost' => 'required|numeric|min:0',
+                    ]);
+
+                    if (empty($this->transactions)) {
+                        $this->dispatch('toast', type: 'error', message: 'Please add at least one line item.');
+                        return false;
+                    }
+                    break;
+
+                case 3:
+                    $this->validate([
+                        'vat_percentage' => 'required|numeric|min:0|max:100',
+                        'remarks' => 'nullable|string|max:1000',
+                    ]);
+                    break;
+            }
+
+            return true;
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $this->dispatch('toast', type: 'error', message: 'Please fix validation errors before continuing.');
+            return false;
         }
     }
+
+    // private function validateCurrentStep(): bool
+    // {
+    //     try {
+    //         switch ($this->currentStep) {
+    //             case 1:
+    //                 // Build validation rules array for step 1
+    //                 $step1Rules = ['ticket_date', 'department_id', 'client_type', 'service_type_id', 'payment_type', 'currency'];
+
+    //                 // Add conditional validation based on client type
+    //                 if ($this->client_type === ClientType::CLIENT->value) {
+    //                     $step1Rules[] = 'client_id';
+    //                 } else {
+    //                     $step1Rules[] = 'cost_center_id';
+    //                 }
+
+    //                 // $this->validateOnly($step1Rules);
+    //                 $this->validateOnly(...$step1Rules);
+    //                 break;
+
+    //             case 2:
+    //                 $this->validateOnly(['transactions', 'transactions.*.description', 'transactions.*.qty', 'transactions.*.uom_id', 'transactions.*.unit_cost']);
+
+    //                 if (empty($this->transactions)) {
+    //                     $this->dispatch('toast', type: 'error', message: 'Please add at least one line item.');
+    //                     return false;
+    //                 }
+    //                 break;
+
+    //             case 3:
+    //                 $this->validateOnly(['vat_percentage', 'remarks']);
+    //                 break;
+    //         }
+
+    //         return true;
+    //     } catch (\Illuminate\Validation\ValidationException $e) {
+    //         $this->dispatch('toast', type: 'error', message: 'Please fix validation errors before continuing.');
+    //         return false;
+    //     }
+    // }
 
     // ==========================================
     // Line Items Management (Alpine.js assisted)
@@ -851,18 +866,48 @@ class CreateFinanceTicket extends Component
         }
     }
 
-    public function openQuickAddUOM()
-    {
-        \Log::info('Opening Quick Add UOM modal');
-        $this->showQuickAddUOM = true;
-    }
+    // ==========================================
+    // Quick Add Modals
+    // ==========================================
 
-    #[On('close-quick-add-uom')]
-    public function closeQuickAddUOM()
-    {
-        \Log::info('Closing Quick Add UOM modal');
-        $this->showQuickAddUOM = false;
-    }
+    // public function openQuickAddClient()
+    // {
+    //     $this->showQuickAddClient = true;
+    // }
+
+    // public function openQuickAddUOM()
+    // {
+    //     $this->showQuickAddUOM = true;
+    // }
+
+    // public function openQuickAddServiceType()
+    // {
+    //     $this->showQuickAddServiceType = true;
+    // }
+
+    // #[On('client-created')]
+    // public function clientCreated($clientId)
+    // {
+    //     $this->client_id = $clientId;
+    //     $this->showQuickAddClient = false;
+    //     $this->dispatch('toast', type: 'success', message: 'Client added successfully!');
+    // }
+
+    // #[On('uom-created')]
+    // public function uomCreated($uomId)
+    // {
+    //     $this->showQuickAddUOM = false;
+    //     $this->dispatch('toast', type: 'success', message: 'UOM added successfully!');
+    //     $this->dispatch('uom-list-updated');
+    // }
+
+    // #[On('service-type-created')]
+    // public function serviceTypeCreated($serviceTypeId)
+    // {
+    //     $this->service_type_id = $serviceTypeId;
+    //     $this->showQuickAddServiceType = false;
+    //     $this->dispatch('toast', type: 'success', message: 'Service Type added successfully!');
+    // }
 
     // Add method to open modal
     public function openQuickAddClient()
@@ -873,14 +918,6 @@ class CreateFinanceTicket extends Component
         }
 
         $this->showQuickAddClient = true;
-    }
-
-    #[On('refresh-clients')]
-    public function refreshClients()
-    {
-        // Force refresh the clients property
-        $this->clients = null;
-        unset($this->clients);
     }
 
     // Update the existing listener
@@ -924,14 +961,6 @@ class CreateFinanceTicket extends Component
 
         \Log::info('Opening Quick Add Service Type modal for department: ' . $this->department_id);
         $this->showQuickAddServiceType = true;
-    }
-
-    #[On('refresh-service-types')]
-    public function refreshServiceTypes()
-    {
-        // Force refresh the service types property
-        $this->serviceTypes = null;
-        unset($this->serviceTypes);
     }
 
     #[On('service-type-created')]

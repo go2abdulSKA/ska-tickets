@@ -38,7 +38,6 @@ return [
     |
     */
 
-    // 'layout' => 'components.layouts.app',
     'layout' => 'admin.layout',
 
     /*
@@ -115,7 +114,7 @@ return [
     |
     */
 
-    'inject_assets' => false,
+    'inject_assets' => true,
 
     /*
     |---------------------------------------------------------------------------
@@ -157,6 +156,5 @@ return [
     |
     */
 
-    // 'pagination_theme' => 'tailwind',
     'pagination_theme' => 'bootstrap',
 ];

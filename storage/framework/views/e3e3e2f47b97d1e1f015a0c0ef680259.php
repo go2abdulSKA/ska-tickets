@@ -1,15 +1,18 @@
+
 <!-- Vendor js -->
 <script src="<?php echo e(asset('backend/assets/js/vendors.min.js')); ?>"></script>
 
 <!-- App js -->
 <script src="<?php echo e(asset('backend/assets/js/app.js')); ?>"></script>
 
-<!-- Additional Scripts -->
-<?php echo e($scripts ?? ''); ?>
+
+
+    
 
 
 
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
+
 
 <!-- Toast Notification Container -->
 <div class="top-0 p-3 position-fixed end-0" style="z-index: 11000">
@@ -26,8 +29,8 @@
     </div>
 </div>
 
+
 <script>
-    // Toast notification function
     window.showToast = function(type, message, title = null) {
         const toast = document.getElementById('liveToast');
         const toastIcon = document.getElementById('toastIcon');

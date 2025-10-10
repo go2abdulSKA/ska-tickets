@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
-use App\Enums\ClientType;
 use App\Enums\Currency;
+use App\Enums\ClientType;
+use App\Enums\TicketType;
 use App\Enums\PaymentType;
 use App\Enums\TicketStatus;
-use App\Enums\TicketType;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
  * TicketMaster Model
@@ -35,38 +35,7 @@ class TicketMaster extends Model
      *
      * @var array
      */
-    protected $fillable = [
-        'prefix',
-        'ticket_no',
-        'ticket_type',
-        'ticket_date',
-        'department_id',
-        'user_id',
-        'user_name',
-        'host_name',
-        'client_type',
-        'client_id',
-        'cost_center_id',
-        'project_code',
-        'contract_no',
-        'service_location',
-        'service_type_id',
-        'ref_no',
-        'payment_terms',
-        'payment_type',
-        'currency',
-        'subtotal',
-        'vat_percentage',
-        'vat_amount',
-        'total_amount',
-        'remarks',
-        'status',
-        'posted_date',
-        'inv_ref',
-        'sage_inv_date',
-        'created_by',
-        'updated_by',
-    ];
+    protected $fillable = ['prefix', 'ticket_no', 'ticket_type', 'ticket_date', 'department_id', 'user_id', 'user_name', 'host_name', 'client_type', 'client_id', 'cost_center_id', 'project_code', 'contract_no', 'service_location', 'service_type_id', 'ref_no', 'payment_terms', 'payment_type', 'currency', 'subtotal', 'vat_percentage', 'vat_amount', 'total_amount', 'remarks', 'status', 'posted_date', 'inv_ref', 'sage_inv_date', 'created_by', 'updated_by'];
 
     /**
      * Get the attributes that should be cast.
@@ -239,8 +208,8 @@ class TicketMaster extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('ticket_no', 'like', "%{$search}%")
-              ->orWhere('ref_no', 'like', "%{$search}%")
-              ->orWhere('project_code', 'like', "%{$search}%");
+                ->orWhere('ref_no', 'like', "%{$search}%")
+                ->orWhere('project_code', 'like', "%{$search}%");
         });
     }
 
@@ -405,5 +374,25 @@ class TicketMaster extends Model
     public function isFuelSale(): bool
     {
         return $this->ticket_type === TicketType::FUEL_SALE;
+    }
+
+    /**
+     * Log status change
+     */
+    public function logStatusChange($newStatus, $remarks = null, $userId = null)
+    {
+        $userId = $userId ?? auth()->id();
+
+        TicketStatusHistory::create([
+            'ticket_id' => $this->id,
+            'old_status' => $this->status,
+            'new_status' => $newStatus,
+            'remarks' => $remarks,
+            'changed_by' => $userId,
+            'changed_at' => now(),
+        ]);
+
+        // Update the ticket status
+        $this->update(['status' => $newStatus]);
     }
 }

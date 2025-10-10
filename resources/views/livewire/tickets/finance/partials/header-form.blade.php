@@ -82,29 +82,28 @@
                 Client <span class="text-danger">*</span>
             </label>
             <div class="input-group">
-                <select wire:model.live="client_id"
-                    class="form-select searchable-select @error('client_id') is-invalid @enderror" id="client_id"
-                    data-placeholder="Search clients..." @if (!$department_id) disabled @endif>
-                    <option value="">
-                        @if (!$department_id)
-                            -- Select Department First --
-                        @else
-                            -- Search & Select Client --
-                        @endif
-                    </option>
-                    @if ($department_id)
-                        @foreach ($clients as $client)
-                            <option value="{{ $client->id }}">
-                                {{ $client->client_name }}
-                                @if ($client->company_name)
-                                    - {{ $client->company_name }}
-                                @endif
-                            </option>
-                        @endforeach
-                    @endif
-                </select>
-                <button type="button" wire:click="openQuickAddClient" class="btn btn-outline-primary"
-                    title="Add New Client" @if (!$department_id) disabled @endif>
+                @php
+                    $clientOptions = [];
+                    if ($department_id && $clients) {
+                        $clientOptions = $clients
+                            ->map(function ($client) {
+                                return [
+                                    'value' => $client->id,
+                                    'label' =>
+                                        $client->client_name .
+                                        ($client->company_name ? ' - ' . $client->company_name : ''),
+                                ];
+                            })
+                            ->toArray();
+                    }
+                @endphp
+
+                <x-ui.searchable-select id="client_id" wire-model="client_id" :options="$clientOptions"
+                    placeholder="{{ !$department_id ? 'Select Department First' : 'Search clients...' }}"
+                    :disabled="!$department_id" />
+
+                <button type="button" wire:click="openQuickAddClient" class="btn btn-primary" title="Add New Client"
+                    @if (!$department_id) disabled @endif>
                     <i class="mdi mdi-plus"></i>
                 </button>
             </div>
@@ -117,30 +116,66 @@
         </div>
     @endif
 
-    {{-- Service Type --}}
+    {{-- Cost Center Selection --}}
+    @if ($client_type === 'cost_center')
+        <div class="col-md-6">
+            <label for="cost_center_id" class="form-label">
+                Cost Center <span class="text-danger">*</span>
+            </label>
+            @php
+                $costCenterOptions = [];
+                if ($costCenters) {
+                    $costCenterOptions = $costCenters
+                        ->map(function ($cc) {
+                            return [
+                                'value' => $cc->id,
+                                'label' => $cc->code . ' - ' . $cc->name,
+                            ];
+                        })
+                        ->toArray();
+                }
+            @endphp
+
+            <x-ui.searchable-select id="cost_center_id" wire-model="cost_center_id" :options="$costCenterOptions"
+                {{-- placeholder="Search cost centers..." /> --}}
+                placeholder="{{ !$department_id ? 'Select Department First' : 'Search cost centers...' }}"
+                :disabled="!$department_id" />
+
+            @error('cost_center_id')
+                <div class="invalid-feedback d-block">{{ $message }}</div>
+            @enderror
+            @if (!$department_id)
+                <small class="text-muted">Please select a department first</small>
+            @endif
+
+        </div>
+    @endif
+
+    {{-- Service Type Selection --}}
     <div class="col-md-6">
         <label for="service_type_id" class="form-label">
             Service Type
         </label>
         <div class="input-group">
-            <select wire:model.live="service_type_id"
-                class="form-select searchable-select @error('service_type_id') is-invalid @enderror"
-                id="service_type_id" data-placeholder="Search service types..."
-                @if (!$department_id) disabled @endif>
-                <option value="">
-                    @if (!$department_id)
-                        -- Select Department First --
-                    @else
-                        -- Search & Select Service Type --
-                    @endif
-                </option>
-                @if ($department_id)
-                    @foreach ($serviceTypes as $st)
-                        <option value="{{ $st->id }}">{{ $st->service_type }}</option>
-                    @endforeach
-                @endif
-            </select>
-            <button type="button" wire:click="openQuickAddServiceType" class="btn btn-outline-primary"
+            @php
+                $serviceTypeOptions = [];
+                if ($department_id && $serviceTypes) {
+                    $serviceTypeOptions = $serviceTypes
+                        ->map(function ($st) {
+                            return [
+                                'value' => $st->id,
+                                'label' => $st->service_type,
+                            ];
+                        })
+                        ->toArray();
+                }
+            @endphp
+
+            <x-ui.searchable-select id="service_type_id" wire-model="service_type_id" :options="$serviceTypeOptions"
+                placeholder="{{ !$department_id ? 'Select Department First' : 'Search service types...' }}"
+                :disabled="!$department_id" />
+
+            <button type="button" wire:click="openQuickAddServiceType" class="btn btn-primary"
                 title="Add New Service Type" @if (!$department_id) disabled @endif>
                 <i class="mdi mdi-plus"></i>
             </button>
@@ -152,108 +187,6 @@
             <small class="text-muted">Please select a department first</small>
         @endif
     </div>
-
-
-    {{-- Cost Center Selection (already correct) --}}
-    @if ($client_type === 'cost_center')
-        <div class="col-md-6">
-            <label for="cost_center_id" class="form-label">
-                Cost Center <span class="text-danger">*</span>
-            </label>
-            <select wire:model.live="cost_center_id" class="form-select @error('cost_center_id') is-invalid @enderror"
-                id="cost_center_id">
-                <option value="">-- Select Cost Center --</option>
-                @foreach ($costCenters as $cc)
-                    <option value="{{ $cc->id }}">{{ $cc->code }} - {{ $cc->name }}</option>
-                @endforeach
-            </select>
-            @error('cost_center_id')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-        </div>
-    @endif
-
-
-    {{-- Client Selection --}}
-    {{-- @if ($client_type === 'client')
-        <div class="col-md-6">
-            <label for="client_id" class="form-label">
-                Client <span class="text-danger">*</span>
-            </label>
-            <div class="input-group">
-                <select wire:model.live="client_id"
-                        class="form-select @error('client_id') is-invalid @enderror"
-                        id="client_id">
-                    <option value="">-- Select Client --</option>
-                    @foreach ($clients as $client)
-                        <option value="{{ $client->id }}">
-                            {{ $client->client_name }}
-                            @if ($client->company_name)
-                                - {{ $client->company_name }}
-                            @endif
-                        </option>
-                    @endforeach
-                </select>
-                <button type="button"
-                        wire:click="openQuickAddClient"
-                        class="btn btn-outline-primary"
-                        title="Add New Client">
-                    <i class="mdi mdi-plus"></i>
-                </button>
-            </div>
-            @error('client_id')
-                <div class="invalid-feedback d-block">{{ $message }}</div>
-            @enderror
-        </div>
-    @endif --}}
-
-    {{-- Cost Center Selection --}}
-    {{-- @if ($client_type === 'cost_center')
-        <div class="col-md-6">
-            <label for="cost_center_id" class="form-label">
-                Cost Center <span class="text-danger">*</span>
-            </label>
-            <select wire:model.live="cost_center_id"
-                    class="form-select @error('cost_center_id') is-invalid @enderror"
-                    id="cost_center_id">
-                <option value="">-- Select Cost Center --</option>
-                @foreach ($costCenters as $cc)
-                    <option value="{{ $cc->id }}">{{ $cc->code }} - {{ $cc->name }}</option>
-                @endforeach
-            </select>
-            @error('cost_center_id')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-        </div>
-    @endif --}}
-
-    {{-- Service Type --}}
-    {{-- <div class="col-md-6">
-        <label for="service_type_id" class="form-label">
-            Service Type
-        </label>
-        <div class="input-group">
-            <select wire:model.live="service_type_id"
-                    class="form-select @error('service_type_id') is-invalid @enderror"
-                    id="service_type_id">
-                <option value="">-- Select Service Type --</option>
-                @foreach ($serviceTypes as $st)
-                    <option value="{{ $st->id }}">{{ $st->service_type }}</option>
-                @endforeach
-            </select>
-            <button type="button"
-                    wire:click="openQuickAddServiceType"
-                    class="btn btn-outline-primary"
-                    title="Add New Service Type"
-                    @if (!$department_id) disabled @endif>
-                <i class="mdi mdi-plus"></i>
-            </button>
-        </div>
-        @error('service_type_id')
-            <div class="invalid-feedback d-block">{{ $message }}</div>
-        @enderror
-    </div> --}}
-
 
     {{-- Divider --}}
     <div class="col-12">
@@ -334,7 +267,7 @@
     {{-- Reference No --}}
     <div class="col-md-4">
         <label for="ref_no" class="form-label">Reference No</label>
-        <input type="text" wire:model.blur="ref_no" class="form-control @error('ref_no') is-invalid @enderror"
+        <input type="text" value='oldvalue' wire:model.blur="ref_no" class="form-control @error('ref_no') is-invalid @enderror"
             id="ref_no" placeholder="e.g., PO-2025-001" maxlength="100">
         @error('ref_no')
             <div class="invalid-feedback">{{ $message }}</div>
@@ -343,114 +276,276 @@
 
 </div>
 
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        initSearchableSelects();
-    });
+{{-- @push('HeadTop')
+    <!-- Choices Plugin CSS-->
+    <link rel="stylesheet" href="{{ asset('backend/assets/plugins/choices/choices.min.css') }}" />
 
-    // Reinitialize after Livewire updates
-    document.addEventListener('livewire:update', function() {
-        initSearchableSelects();
-    });
+    <!-- Select Plugin CSS -->
+    <link rel="stylesheet" href="{{ asset('backend/assets/plugins/select2/select2.min.css') }}" />
+@endpush --}}
 
-    function initSearchableSelects() {
-        // Destroy existing instances first
-        document.querySelectorAll('.searchable-select').forEach(function(select) {
-            if (select.tomselect) {
-                select.tomselect.destroy();
-            }
+{{-- @push('scripts')
+    <!-- Jquery for select2-->
+    <script src="{{ asset('backend/assets/plugins/jquery/jquery.min.js') }}"></script>
+
+    <!-- Select2 Plugin Js -->
+    <script src="{{ asset('backend/assets/plugins/select2/select2.min.js') }}"></script>
+
+    <script>
+        // Track all Select2 instances
+        window.select2Instances = window.select2Instances || {};
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initializeAllSelects, 100);
         });
 
-        // Initialize Tom Select on all searchable selects
-        document.querySelectorAll('.searchable-select').forEach(function(select) {
-            if (!select.disabled) {
-                new TomSelect(select, {
-                    create: false,
-                    sortField: {
-                        field: "text",
-                        direction: "asc"
-                    },
-                    placeholder: select.dataset.placeholder || 'Search...',
-                    plugins: ['dropdown_input'],
-                    onItemAdd: function(value, item) {
-                        // Trigger Livewire update
-                        this.wrapper.querySelector('select').dispatchEvent(new Event('change', { bubbles: true }));
-                    },
-                    onClear: function() {
-                        // Trigger Livewire update on clear
-                        this.wrapper.querySelector('select').dispatchEvent(new Event('change', { bubbles: true }));
-                    },
-                    maxOptions: 500, // Show up to 500 options
-                    render: {
-                        no_results: function(data, escape) {
-                            return '<div class="no-results">No results found for "' + escape(data.input) + '"</div>';
-                        },
+        // Reinitialize after Livewire DOM updates
+        document.addEventListener('livewire:update', function() {
+            setTimeout(initializeAllSelects, 200);
+        });
+
+        function initializeAllSelects() {
+            if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+                console.error('jQuery or Select2 not loaded');
+                return;
+            }
+
+            console.log('🔄 Initializing Select2 dropdowns...');
+
+            jQuery('[data-toggle="select2"]').each(function() {
+                var $element = jQuery(this);
+                var elementId = $element.attr('id');
+
+                if (!elementId) {
+                    console.warn('⚠️ Select element without ID found, skipping');
+                    return;
+                }
+
+                // Skip if disabled
+                if ($element.is(':disabled')) {
+                    console.log('⏭️ Skipping disabled:', elementId);
+                    if (window.select2Instances[elementId]) {
+                        try {
+                            $element.select2('destroy');
+                            delete window.select2Instances[elementId];
+                        } catch (e) {}
                     }
+                    return;
+                }
+
+                // Check if already initialized and working
+                if (window.select2Instances[elementId] && $element.hasClass('select2-hidden-accessible')) {
+                    console.log('✅ Already initialized:', elementId);
+                    return;
+                }
+
+                // Destroy if partially initialized
+                if ($element.hasClass('select2-hidden-accessible')) {
+                    try {
+                        $element.select2('destroy');
+                    } catch (e) {}
+                }
+
+                // Initialize Select2
+                $element.select2({
+                    theme: 'bootstrap5',
+                    placeholder: $element.data('placeholder') || 'Select an option',
+                    allowClear: true,
+                    width: '100%'
                 });
+
+                // Track this instance
+                window.select2Instances[elementId] = true;
+                console.log('✨ Initialized:', elementId);
+
+                // Bind change event to sync with Livewire
+                $element.off('select2:select').on('select2:select', function(e) {
+                    var value = $element.val();
+                    syncWithLivewire(elementId, value);
+                });
+
+                $element.off('select2:clear').on('select2:clear', function(e) {
+                    syncWithLivewire(elementId, null);
+                });
+            });
+
+            console.log('📊 Total Select2 instances:', Object.keys(window.select2Instances).length);
+        }
+
+        function syncWithLivewire(elementId, value) {
+            console.log('🔄 Syncing', elementId, 'with value:', value);
+
+            if (elementId === 'client_id') {
+                @this.set('client_id', value);
+            } else if (elementId === 'cost_center_id') {
+                @this.set('cost_center_id', value);
+            } else if (elementId === 'service_type_id') {
+                @this.set('service_type_id', value);
             }
-        });
-    }
+        }
 
-    // Listen for client/service type creation events to refresh
-    Livewire.on('client-created', () => {
-        setTimeout(() => {
-            initSearchableSelects();
-        }, 100);
-    });
+        // Listen for events
+        if (typeof Livewire !== 'undefined') {
+            Livewire.on('client-created', () => {
+                setTimeout(initializeAllSelects, 300);
+            });
 
-    Livewire.on('service-type-created', () => {
-        setTimeout(() => {
-            initSearchableSelects();
-        }, 100);
-    });
-</script>
-@endpush
+            Livewire.on('service-type-created', () => {
+                setTimeout(initializeAllSelects, 300);
+            });
+        }
+    </script>
+@endpush --}}
 
-@push('styles')
-<style>
-    /* Custom styling for Tom Select */
-    .ts-wrapper {
-        width: 100% !important;
-    }
 
-    .ts-control {
-        min-height: 38px !important;
-        border-radius: 0.25rem !important;
-        border-color: #dee2e6 !important;
-    }
+{{-- @push('styles')
+    <style>
+        /* =========================
+           SELECT2 DARK THEME
+           ========================= */
 
-    .ts-control:focus {
-        border-color: #86b7fe !important;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
-    }
+        /* Base Container */
+        .select2-container {
+            width: 100% !important;
+        }
 
-    .input-group .ts-wrapper {
-        flex: 1 1 auto;
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-    }
+        /* Selection Box */
+        .select2-container--bootstrap5 .select2-selection {
+            height: calc(1.5em + 0.9rem + 2px) !important;
+            border: 1px solid #404954 !important;
+            background-color: #37404a !important;
+            color: #aab8c5 !important;
+            border-radius: 0.25rem !important;
+            display: flex;
+            align-items: center;
+        }
 
-    .input-group .ts-wrapper .ts-control {
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-    }
+        /* Selected Text */
+        .select2-container--bootstrap5 .select2-selection__rendered {
+            line-height: calc(1.5em + 0.9rem) !important;
+            padding: 0 0.9rem !important;
+            color: #aab8c5 !important;
+        }
 
-    .ts-dropdown {
-        border-color: #dee2e6 !important;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
+        /* Placeholder */
+        .select2-container--bootstrap5 .select2-selection__placeholder {
+            color: #6c757d !important;
+        }
 
-    .no-results {
-        padding: 8px 12px;
-        color: #6c757d;
-        text-align: center;
-    }
+        /* Arrow */
+        .select2-container--bootstrap5 .select2-selection__arrow {
+            height: 100% !important;
+            right: 0.45rem !important;
+        }
 
-    /* Fix for disabled state */
-    select:disabled + .ts-wrapper {
-        pointer-events: none;
-        opacity: 0.6;
-    }
-</style>
-@endpush
+        .select2-container--bootstrap5 .select2-selection__arrow b {
+            border-color: #aab8c5 transparent transparent transparent !important;
+        }
+
+        /* Clear Button */
+        .select2-container--bootstrap5 .select2-selection__clear {
+            color: #aab8c5 !important;
+            margin-right: 10px;
+        }
+
+        /* Focus State */
+        .select2-container--bootstrap5.select2-container--focus .select2-selection,
+        .select2-container--bootstrap5.select2-container--open .select2-selection {
+            border-color: #727cf5 !important;
+            box-shadow: 0 0 0 0.2rem rgba(114, 124, 245, 0.25) !important;
+        }
+
+        /* Disabled State */
+        .select2-container--bootstrap5 .select2-selection--single[aria-disabled=true] {
+            background-color: #2c333b !important;
+            cursor: not-allowed !important;
+            opacity: 0.6;
+        }
+
+        /* Dropdown */
+        .select2-dropdown {
+            background-color: #37404a !important;
+            border: 1px solid #404954 !important;
+            border-radius: 0.25rem;
+            z-index: 1056 !important;
+        }
+
+        /* Search Box */
+        .select2-search--dropdown {
+            padding: 8px;
+            background-color: #37404a;
+        }
+
+        .select2-search--dropdown .select2-search__field {
+            background-color: #2c333b !important;
+            border: 1px solid #404954 !important;
+            color: #aab8c5 !important;
+            padding: 0.45rem 0.9rem;
+            border-radius: 0.25rem;
+        }
+
+        .select2-search--dropdown .select2-search__field:focus {
+            border-color: #727cf5 !important;
+            outline: none;
+        }
+
+        /* Results List */
+        .select2-results {
+            background-color: #37404a !important;
+        }
+
+        .select2-results__options {
+            background-color: #37404a !important;
+        }
+
+        .select2-results__option {
+            padding: 8px 12px !important;
+            color: #aab8c5 !important;
+            background-color: #37404a !important;
+        }
+
+        /* Highlighted Option */
+        .select2-results__option--highlighted {
+            background-color: #727cf5 !important;
+            color: #ffffff !important;
+        }
+
+        /* Selected Option */
+        .select2-results__option[aria-selected=true] {
+            background-color: #2c333b !important;
+            color: #727cf5 !important;
+        }
+
+        .select2-results__option[aria-selected=true]:hover {
+            background-color: #727cf5 !important;
+            color: #ffffff !important;
+        }
+
+        /* No Results */
+        .select2-results__message {
+            color: #6c757d !important;
+            padding: 12px;
+        }
+
+        /* Input Group Adjustments */
+        .input-group .select2-container {
+            flex: 1 1 auto;
+            width: 1% !important;
+        }
+
+        .input-group .select2-selection {
+            border-right: 0 !important;
+            border-top-right-radius: 0 !important;
+            border-bottom-right-radius: 0 !important;
+        }
+
+        /* Fix alignment */
+        .input-group {
+            align-items: stretch;
+        }
+
+        .input-group>* {
+            margin: 0 !important;
+        }
+    </style>
+@endpush --}}

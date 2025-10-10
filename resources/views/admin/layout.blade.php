@@ -1,8 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 
+
     <!-- Page Header -->
-    @include('admin.partials.header')
+    <head>
+
+        @include('admin.partials.header')
+
+        @stack('styles')
+
+        <!-- Livewire Styles -->
+        @livewireStyles
+
+    </head>
     <!-- Page Header End-->
 
     <body>
@@ -41,17 +51,22 @@
             <!-- End of Main Content -->
             <!-- ============================================================== -->
 
-
             <!-- Theme Settings -->
             {{-- @include('admin.partials.theme_setting') --}}
 
         </div>
         <!-- END wrapper -->
 
-        <!-- Scripts -->
-        @livewireScripts
+        {{-- Additional Scripts --}}
+        {{-- {{ $scripts ?? '' }} --}}
+
+        @stack('scripts')
 
         @include('admin.partials.scripts')
+
+
+        <!-- Livewire Scripts -->
+        @livewireScripts
 
     </body>
 

@@ -7,6 +7,10 @@
     {{-- Flash Messages --}}
     <x-ui.flash-msg />
 
+@php
+    // dd(Livewire::isDiscoverable('tickets.finance.view-finance-ticket'));
+@endphp
+
     {{-- Statistics Cards --}}
     <div class="mb-3 row">
         <div class="col-xl-3 col-md-6">
@@ -86,18 +90,18 @@
     <div class="row">
         <div class="col-12">
             <div class="card">
-                
+
                 {{-- Card Header with Filters and Actions --}}
                 <div class="card-header border-light">
                     <div class="row g-3">
-                        
+
                         {{-- Top Row: Search and Create Button --}}
                         <div class="col-12">
                             <div class="flex-wrap gap-2 d-flex justify-content-between align-items-center">
                                 {{-- Search Input --}}
                                 <div class="app-search" style="min-width: 300px;">
-                                    <input wire:model.live.debounce.300ms="search" 
-                                           type="search" 
+                                    <input wire:model.live.debounce.300ms="search"
+                                           type="search"
                                            class="form-control"
                                            placeholder="Search by ticket no, client, project...">
                                     <i data-lucide="search" class="app-search-icon text-muted"></i>
@@ -113,7 +117,7 @@
                         {{-- Bottom Row: Filters --}}
                         <div class="col-12">
                             <div class="flex-wrap gap-2 d-flex align-items-center">
-                                
+
                                 {{-- Status Filter --}}
                                 <div class="flex-shrink-0">
                                     <select wire:model.live="statusFilter" class="form-select form-select-sm">
@@ -148,23 +152,23 @@
 
                                 {{-- Date From --}}
                                 <div class="flex-shrink-0">
-                                    <input type="date" 
-                                           wire:model.live="dateFrom" 
+                                    <input type="date"
+                                           wire:model.live="dateFrom"
                                            class="form-control form-control-sm"
                                            placeholder="From Date">
                                 </div>
 
                                 {{-- Date To --}}
                                 <div class="flex-shrink-0">
-                                    <input type="date" 
-                                           wire:model.live="dateTo" 
+                                    <input type="date"
+                                           wire:model.live="dateTo"
                                            class="form-control form-control-sm"
                                            placeholder="To Date">
                                 </div>
 
                                 {{-- Clear Filters Button --}}
-                                <button type="button" 
-                                        wire:click="clearFilters" 
+                                <button type="button"
+                                        wire:click="clearFilters"
                                         class="btn btn-sm btn-outline-secondary"
                                         title="Clear Filters">
                                     <i class="mdi mdi-filter-remove"></i> Clear
@@ -182,8 +186,8 @@
 
                                 {{-- Bulk Actions --}}
                                 @if(count($selectedItems) > 0)
-                                    <button type="button" 
-                                            wire:click="confirmBulkDelete" 
+                                    <button type="button"
+                                            wire:click="confirmBulkDelete"
                                             class="btn btn-sm btn-danger">
                                         <i class="mdi mdi-delete me-1"></i> Delete Selected ({{ count($selectedItems) }})
                                     </button>
@@ -191,14 +195,14 @@
 
                                 {{-- Export Buttons --}}
                                 <div class="flex-shrink-0 btn-group">
-                                    <button type="button" 
-                                            wire:click="exportExcel" 
+                                    <button type="button"
+                                            wire:click="exportExcel"
                                             class="btn btn-sm btn-outline-success"
                                             title="Export to Excel">
                                         <i class="mdi mdi-file-excel"></i>
                                     </button>
-                                    <button type="button" 
-                                            wire:click="exportPDF" 
+                                    <button type="button"
+                                            wire:click="exportPDF"
                                             class="btn btn-sm btn-outline-danger"
                                             title="Export to PDF">
                                         <i class="mdi mdi-file-pdf-box"></i>
@@ -218,7 +222,7 @@
                                 {{-- Select All Checkbox --}}
                                 <th class="ps-3" style="width: 40px;">
                                     <input wire:model.live="selectAll"
-                                        class="form-check-input" 
+                                        class="form-check-input"
                                         type="checkbox">
                                 </th>
 
@@ -245,8 +249,8 @@
                                 <th style="width: 120px;">Project</th>
 
                                 {{-- Amount (Sortable) --}}
-                                <th wire:click="sortBy('total_amount')" 
-                                    class="text-end" 
+                                <th wire:click="sortBy('total_amount')"
+                                    class="text-end"
                                     style="cursor: pointer; width: 120px;">
                                     Amount
                                     @if($sortField === 'total_amount')
@@ -268,15 +272,15 @@
                                 <tr>
                                     {{-- Checkbox --}}
                                     <td class="ps-3">
-                                        <input wire:model.live="selectedItems" 
+                                        <input wire:model.live="selectedItems"
                                                value="{{ $ticket->id }}"
-                                               class="form-check-input" 
+                                               class="form-check-input"
                                                type="checkbox">
                                     </td>
 
                                     {{-- Ticket No (Clickable) --}}
                                     <td>
-                                        <a href="javascript:void(0);" 
+                                        <a href="javascript:void(0);"
                                            wire:click="view({{ $ticket->id }})"
                                            class="text-decoration-none">
                                             <strong class="text-primary">{{ $ticket->ticket_no }}</strong>
@@ -419,7 +423,7 @@
 
     {{-- View Offcanvas --}}
     @if($showViewOffcanvas && $viewTicketId)
-        @livewire('livewire.tickets.finance.view-finance-ticket', ['ticketId' => $viewTicketId], key('view-'.$viewTicketId))
+        @livewire('tickets.finance.view-finance-ticket', ['ticketId' => $viewTicketId], key('view-'.$viewTicketId))
     @endif
 
     {{-- Delete Modal --}}

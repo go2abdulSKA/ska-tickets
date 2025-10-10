@@ -168,7 +168,7 @@
             <small class="text-muted">Please select a department first</small>
         @endif
     </div>
-                   
+
     {{-- Client Selection --}}
     {{-- @if ($client_type === 'client')
         <div class="col-md-6">

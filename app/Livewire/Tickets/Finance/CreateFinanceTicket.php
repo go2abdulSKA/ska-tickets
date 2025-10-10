@@ -204,11 +204,6 @@ class CreateFinanceTicket extends Component
         return $query->orderBy('client_name')->get();
     }
 
-    public function getCostCentersProperty()
-    {
-        return CostCenter::active()->orderBy('code')->get();
-    }
-
     public function getServiceTypesProperty()
     {
         $query = ServiceType::active();
@@ -218,6 +213,14 @@ class CreateFinanceTicket extends Component
         }
 
         return $query->orderBy('service_type')->get();
+    }
+
+    // Make sure these properties are NOT cached
+    // Remove #[Computed] attribute if exists
+
+    public function getCostCentersProperty()
+    {
+        return CostCenter::active()->orderBy('code')->get();
     }
 
     public function getUomsProperty()
@@ -781,7 +784,7 @@ class CreateFinanceTicket extends Component
             'posted_date' => now(),
         ]);
 
-//ReviseThis is commented out for now. We can enable it later if needed.
+        //ReviseThis is commented out for now. We can enable it later if needed.
         // Send notification
         // try {
         //     $ticket->user->notify(new TicketPostedNotification($ticket));
@@ -919,17 +922,76 @@ class CreateFinanceTicket extends Component
 
     // Update the existing listener
     #[On('client-created')]
-    public function clientCreated($clientId)
+    public function clientCreated($data)
     {
-        $this->client_id = $clientId;
+        \Log::info('Client created event received', $data);
+
+        // Set the client_id
+        $this->client_id = $data['clientId'];
+
+        // Close modal
         $this->showQuickAddClient = false;
-        $this->dispatch('toast', type: 'success', message: 'Client added successfully!');
+
+        // Reset the clients property to force refresh
+        unset($this->clients);
+
+        // Force refresh the component
+        // $this->dispatch('$refresh');
+
+        // Show success message with client name
+        $clientName = $data['companyName'] ?? $data['clientName'];
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'message' => "Client '{$data['clientName']}' added and selected successfully!",
+        ]);
     }
 
     #[On('close-quick-add-client')]
     public function closeQuickAddClient()
     {
         $this->showQuickAddClient = false;
+    }
+
+    public function openQuickAddServiceType()
+    {
+        if (!$this->department_id) {
+            $this->dispatch('toast', type: 'warning', message: 'Please select a department first.');
+            return;
+        }
+
+        \Log::info('Opening Quick Add Service Type modal for department: ' . $this->department_id);
+        $this->showQuickAddServiceType = true;
+    }
+
+    #[On('service-type-created')]
+    public function serviceTypeCreated($data)
+    {
+        \Log::info('Service Type created event received', $data);
+
+        // Set the service_type_id
+        $this->service_type_id = $data['serviceTypeId'];
+
+        // Close modal
+        $this->showQuickAddServiceType = false;
+
+        // Reset the service types property to force refresh
+        unset($this->serviceTypes);
+
+        // Force refresh the component
+        $this->dispatch('$refresh');
+
+        // Show success message with service type name
+        $this->dispatch('toast', [
+            'type' => 'success',
+            'message' => "Service Type '{$data['serviceTypeName']}' added and selected successfully!",
+        ]);
+    }
+
+    #[On('close-quick-add-service-type')]
+    public function closeQuickAddServiceType()
+    {
+        \Log::info('Closing Quick Add Service Type modal');
+        $this->showQuickAddServiceType = false;
     }
 
     // ==========================================

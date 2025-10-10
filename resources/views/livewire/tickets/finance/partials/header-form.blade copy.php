@@ -82,14 +82,13 @@
                 Client <span class="text-danger">*</span>
             </label>
             <div class="input-group">
-                <select wire:model.live="client_id"
-                    class="form-select searchable-select @error('client_id') is-invalid @enderror" id="client_id"
-                    data-placeholder="Search clients..." @if (!$department_id) disabled @endif>
+                <select wire:model.live="client_id" class="form-select @error('client_id') is-invalid @enderror"
+                    id="client_id" @if (!$department_id) disabled @endif>
                     <option value="">
                         @if (!$department_id)
                             -- Select Department First --
                         @else
-                            -- Search & Select Client --
+                            -- Select Client --
                         @endif
                     </option>
                     @if ($department_id)
@@ -117,21 +116,38 @@
         </div>
     @endif
 
+    {{-- Cost Center Selection (already correct) --}}
+    @if ($client_type === 'cost_center')
+        <div class="col-md-6">
+            <label for="cost_center_id" class="form-label">
+                Cost Center <span class="text-danger">*</span>
+            </label>
+            <select wire:model.live="cost_center_id" class="form-select @error('cost_center_id') is-invalid @enderror"
+                id="cost_center_id">
+                <option value="">-- Select Cost Center --</option>
+                @foreach ($costCenters as $cc)
+                    <option value="{{ $cc->id }}">{{ $cc->code }} - {{ $cc->name }}</option>
+                @endforeach
+            </select>
+            @error('cost_center_id')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+    @endif
+
     {{-- Service Type --}}
     <div class="col-md-6">
         <label for="service_type_id" class="form-label">
             Service Type
         </label>
         <div class="input-group">
-            <select wire:model.live="service_type_id"
-                class="form-select searchable-select @error('service_type_id') is-invalid @enderror"
-                id="service_type_id" data-placeholder="Search service types..."
-                @if (!$department_id) disabled @endif>
+            <select wire:model.live="service_type_id" class="form-select @error('service_type_id') is-invalid @enderror"
+                id="service_type_id" @if (!$department_id) disabled @endif>
                 <option value="">
                     @if (!$department_id)
                         -- Select Department First --
                     @else
-                        -- Search & Select Service Type --
+                        -- Select Service Type --
                     @endif
                 </option>
                 @if ($department_id)
@@ -152,27 +168,6 @@
             <small class="text-muted">Please select a department first</small>
         @endif
     </div>
-
-
-    {{-- Cost Center Selection (already correct) --}}
-    @if ($client_type === 'cost_center')
-        <div class="col-md-6">
-            <label for="cost_center_id" class="form-label">
-                Cost Center <span class="text-danger">*</span>
-            </label>
-            <select wire:model.live="cost_center_id" class="form-select @error('cost_center_id') is-invalid @enderror"
-                id="cost_center_id">
-                <option value="">-- Select Cost Center --</option>
-                @foreach ($costCenters as $cc)
-                    <option value="{{ $cc->id }}">{{ $cc->code }} - {{ $cc->name }}</option>
-                @endforeach
-            </select>
-            @error('cost_center_id')
-                <div class="invalid-feedback">{{ $message }}</div>
-            @enderror
-        </div>
-    @endif
-
 
     {{-- Client Selection --}}
     {{-- @if ($client_type === 'client')
@@ -342,115 +337,3 @@
     </div>
 
 </div>
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        initSearchableSelects();
-    });
-
-    // Reinitialize after Livewire updates
-    document.addEventListener('livewire:update', function() {
-        initSearchableSelects();
-    });
-
-    function initSearchableSelects() {
-        // Destroy existing instances first
-        document.querySelectorAll('.searchable-select').forEach(function(select) {
-            if (select.tomselect) {
-                select.tomselect.destroy();
-            }
-        });
-
-        // Initialize Tom Select on all searchable selects
-        document.querySelectorAll('.searchable-select').forEach(function(select) {
-            if (!select.disabled) {
-                new TomSelect(select, {
-                    create: false,
-                    sortField: {
-                        field: "text",
-                        direction: "asc"
-                    },
-                    placeholder: select.dataset.placeholder || 'Search...',
-                    plugins: ['dropdown_input'],
-                    onItemAdd: function(value, item) {
-                        // Trigger Livewire update
-                        this.wrapper.querySelector('select').dispatchEvent(new Event('change', { bubbles: true }));
-                    },
-                    onClear: function() {
-                        // Trigger Livewire update on clear
-                        this.wrapper.querySelector('select').dispatchEvent(new Event('change', { bubbles: true }));
-                    },
-                    maxOptions: 500, // Show up to 500 options
-                    render: {
-                        no_results: function(data, escape) {
-                            return '<div class="no-results">No results found for "' + escape(data.input) + '"</div>';
-                        },
-                    }
-                });
-            }
-        });
-    }
-
-    // Listen for client/service type creation events to refresh
-    Livewire.on('client-created', () => {
-        setTimeout(() => {
-            initSearchableSelects();
-        }, 100);
-    });
-
-    Livewire.on('service-type-created', () => {
-        setTimeout(() => {
-            initSearchableSelects();
-        }, 100);
-    });
-</script>
-@endpush
-
-@push('styles')
-<style>
-    /* Custom styling for Tom Select */
-    .ts-wrapper {
-        width: 100% !important;
-    }
-
-    .ts-control {
-        min-height: 38px !important;
-        border-radius: 0.25rem !important;
-        border-color: #dee2e6 !important;
-    }
-
-    .ts-control:focus {
-        border-color: #86b7fe !important;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
-    }
-
-    .input-group .ts-wrapper {
-        flex: 1 1 auto;
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-    }
-
-    .input-group .ts-wrapper .ts-control {
-        border-top-right-radius: 0 !important;
-        border-bottom-right-radius: 0 !important;
-    }
-
-    .ts-dropdown {
-        border-color: #dee2e6 !important;
-        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-    }
-
-    .no-results {
-        padding: 8px 12px;
-        color: #6c757d;
-        text-align: center;
-    }
-
-    /* Fix for disabled state */
-    select:disabled + .ts-wrapper {
-        pointer-events: none;
-        opacity: 0.6;
-    }
-</style>
-@endpush

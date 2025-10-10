@@ -7,6 +7,9 @@
 <!-- Additional Scripts -->
 {{ $scripts ?? '' }}
 
+{{-- Tom Select --}}
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+
 <!-- Toast Notification Container -->
 <div class="top-0 p-3 position-fixed end-0" style="z-index: 11000">
     <div id="liveToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true">

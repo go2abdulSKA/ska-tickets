@@ -3,29 +3,30 @@
 
 namespace App\Livewire\Tickets\Finance;
 
-use Livewire\Component;
-use Livewire\WithFileUploads;
-use Livewire\Attributes\On;
-use App\Models\TicketMaster;
-use App\Models\TicketTransaction;
-use App\Models\TicketAttachment;
-use App\Models\Department;
-use App\Models\Client;
-use App\Models\CostCenter;
-use App\Models\ServiceType;
-use App\Models\UOM;
-use App\Enums\TicketType;
-use App\Enums\TicketStatus;
 use App\Enums\ClientType;
 use App\Enums\Currency;
 use App\Enums\PaymentType;
+use App\Enums\TicketStatus;
+use App\Enums\TicketType;
+use App\Models\Client;
+use App\Models\CostCenter;
+use App\Models\Department;
+use App\Models\ServiceType;
+use App\Models\TicketAttachment;
+use App\Models\TicketMaster;
+use App\Models\TicketStatusHistory;
+use App\Models\TicketTransaction;
+use App\Models\UOM;
 use App\Services\TicketNumberService;
-use App\Services\TicketAutoSaveService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Livewire\Component;
+use Livewire\WithFileUploads;
+use App\Services\ActivityLogService;
 use App\Notifications\TicketCreatedNotification;
 use App\Notifications\TicketPostedNotification;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 
 class CreateFinanceTicket extends Component
 {
@@ -35,12 +36,12 @@ class CreateFinanceTicket extends Component
     // Properties
     // ==========================================
 
-    // Mode
+    // Mode flags
     public $editMode = false;
     public $ticketId = null;
     public $isDuplicate = false;
 
-    // Step Management
+    // Step wizard
     public $currentStep = 1;
     public $totalSteps = 4;
 
@@ -59,13 +60,13 @@ class CreateFinanceTicket extends Component
     public $payment_type = 'na';
     public $currency = 'usd';
 
-    // Line Items (Step 2) - Using Alpine.js
+    // Line Items (Step 2)
     public $transactions = [];
     public $transactionCounter = 0;
 
-    // Totals & Remarks (Step 3)
+    // Totals (Step 3)
     public $subtotal = 0;
-    public $vat_percentage = 5.0;
+    public $vat_percentage = 5;
     public $vat_amount = 0;
     public $total_amount = 0;
     public $remarks = '';
@@ -83,213 +84,166 @@ class CreateFinanceTicket extends Component
     public $showQuickAddUOM = false;
     public $showQuickAddServiceType = false;
 
-    // Preview Ticket Number
-    public $previewTicketNumber = '';
+    // Preview ticket number (for display only)
+    public $previewTicketNumber = null;
 
     // Validation tracking
     public $validatedSteps = [];
 
-    // ==========================================
-    // Validation Rules
-    // ==========================================
-
-    protected function rules()
-    {
-        $rules = [
-            // Step 1: Header
-            'ticket_date' => 'required|date',
-            'department_id' => 'required|exists:departments,id',
-            'client_type' => 'required|in:client,cost_center',
-            'service_type_id' => 'nullable|exists:service_types,id',
-            'project_code' => 'nullable|string|max:100',
-            'contract_no' => 'nullable|string|max:100',
-            'service_location' => 'nullable|string|max:100',
-            'ref_no' => 'nullable|string|max:100',
-            'payment_terms' => 'nullable|string|max:100',
-            'payment_type' => 'required|in:po,cash,credit_card,na',
-            'currency' => 'required|in:usd,aed,euro,others',
-
-            // Step 2: Line Items
-            'transactions' => 'required|array|min:1',
-            'transactions.*.description' => 'required|string|max:500',
-            'transactions.*.qty' => 'required|numeric|min:0.001',
-            'transactions.*.uom_id' => 'required|exists:uom,id',
-            'transactions.*.unit_cost' => 'required|numeric|min:0',
-
-            // Step 3: Totals
-            'vat_percentage' => 'required|numeric|min:0|max:100',
-            'remarks' => 'nullable|string|max:1000',
-
-            // Attachments
-            'attachments.*' => 'nullable|file|max:5120', // 5MB max
-        ];
-
-        // Conditional validation for client/cost center
-        if ($this->client_type === ClientType::CLIENT->value) {
-            $rules['client_id'] = 'required|exists:clients,id';
-        } else {
-            $rules['cost_center_id'] = 'required|exists:cost_centers,id';
-        }
-
-        return $rules;
-    }
-
-    protected $messages = [
-        'ticket_date.required' => 'Ticket date is required.',
-        'department_id.required' => 'Please select a department.',
-        'client_id.required' => 'Please select a client.',
-        'cost_center_id.required' => 'Please select a cost center.',
-        'transactions.required' => 'At least one line item is required.',
-        'transactions.min' => 'At least one line item is required.',
-        'transactions.*.description.required' => 'Description is required for all line items.',
-        'transactions.*.qty.required' => 'Quantity is required.',
-        'transactions.*.qty.min' => 'Quantity must be at least 0.001.',
-        'transactions.*.uom_id.required' => 'Unit of measurement is required.',
-        'transactions.*.unit_cost.required' => 'Unit cost is required.',
-    ];
+    // Services
+    protected $ticketNumberService;
 
     // ==========================================
     // Lifecycle Hooks
     // ==========================================
 
+    /**
+     * Inject TicketNumberService dependency
+     */
+    public function boot(TicketNumberService $ticketNumberService)
+    {
+        $this->ticketNumberService = $ticketNumberService;
+    }
+
+    /**
+     * Component initialization
+     *
+     * @param int|null $ticketId Ticket ID for edit mode
+     * @param bool $duplicate Whether this is a duplicate operation
+     */
     public function mount($ticketId = null, $duplicate = false)
     {
-        $user = Auth::user();
-
-        // Set defaults
+        // Set default date
         $this->ticket_date = now()->format('Y-m-d');
-        $this->department_id = $user->departments->first()?->id;
 
-        // Preview ticket number
-        if ($this->department_id) {
-            $this->updatePreviewTicketNumber();
+        // Get user's first department
+        $userDepartments = Auth::user()->departments;
+        if ($userDepartments->isNotEmpty()) {
+            $this->department_id = $userDepartments->first()->id;
         }
 
-        // Edit mode
+        // Check if this is duplicate from route name
+        if (request()->routeIs('tickets.finance.duplicate')) {
+            $duplicate = true;
+        }
+
+        // Edit or Duplicate mode
         if ($ticketId) {
-            $this->loadTicket($ticketId, $duplicate);
+            $this->ticketId = $ticketId;
+            $this->isDuplicate = $duplicate;
+            $this->editMode = !$duplicate;
+
+            $this->loadTicket($ticketId);
+
+            // If duplicate, reset ID and status
+            if ($duplicate) {
+                $this->ticketId = null;
+            }
+        } else {
+            // New ticket - add empty transaction row
+            $this->addTransaction();
         }
 
-        // Check for auto-saved draft
-        if (!$ticketId && !$duplicate) {
-            $this->checkAutoSavedDraft();
+        // Load preview number for new tickets
+        // IMPORTANT: This is just a preview, actual number assigned on POST
+        if (!$this->editMode && $this->department_id) {
+            $this->previewTicketNumber = $this->ticketNumberService->previewNextNumber($this->department_id);
         }
 
-        // Initialize with one empty line item
-        if (empty($this->transactions)) {
-            $this->addLineItem();
-        }
+        // Check for draft in session
+        $this->checkForDraft();
     }
 
-    public function dehydrate()
+    /**
+     * Load existing ticket data for edit/duplicate
+     *
+     * @param int $ticketId
+     */
+    protected function loadTicket($ticketId)
     {
-        // Auto-save draft every update (debounced on frontend)
-        if ($this->autoSaveEnabled && !$this->editMode) {
-            $this->autoSaveDraft();
-        }
-    }
+        $ticket = TicketMaster::with(['transactions', 'attachments'])->findOrFail($ticketId);
 
-    // ==========================================
-    // Computed Properties
-    // ==========================================
-
-    public function getClientsProperty()
-    {
-        $query = Client::active()->with('department:id,department');
-
-        if ($this->department_id) {
-            $query->where('department_id', $this->department_id);
+        // Check access
+        if (!Auth::user()->isSuperAdmin()) {
+            $userDeptIds = Auth::user()->getDepartmentIds();
+            if (!in_array($ticket->department_id, $userDeptIds)) {
+                abort(403, 'You do not have access to this ticket.');
+            }
         }
 
-        return $query->orderBy('client_name')->get();
-    }
+        // Load header data
+        $this->ticket_date = $ticket->ticket_date->format('Y-m-d');
+        $this->department_id = $ticket->department_id;
+        $this->client_type = $ticket->client_type->value;
+        $this->client_id = $ticket->client_id;
+        $this->cost_center_id = $ticket->cost_center_id;
+        $this->project_code = $ticket->project_code ?? '';
+        $this->contract_no = $ticket->contract_no ?? '';
+        $this->service_location = $ticket->service_location ?? '';
+        $this->service_type_id = $ticket->service_type_id;
+        $this->ref_no = $ticket->ref_no ?? '';
+        $this->payment_terms = $ticket->payment_terms ?? '';
+        $this->payment_type = $ticket->payment_type->value;
+        $this->currency = $ticket->currency->value;
+        $this->vat_percentage = $ticket->vat_percentage;
+        $this->remarks = $ticket->remarks ?? '';
 
-    public function getServiceTypesProperty()
-    {
-        $query = ServiceType::active();
+        // Load transactions
+        $this->transactions = $ticket->transactions
+            ->map(function ($trans) {
+                return [
+                    'temp_id' => uniqid(),
+                    'sr_no' => $trans->sr_no,
+                    'description' => $trans->description,
+                    'qty' => $trans->qty,
+                    'uom_id' => $trans->uom_id,
+                    'unit_cost' => $trans->unit_cost,
+                    'total_cost' => $trans->total_cost,
+                ];
+            })
+            ->toArray();
 
-        if ($this->department_id) {
-            $query->where('department_id', $this->department_id);
+        // Load attachments (for edit mode only)
+        if (!$this->isDuplicate) {
+            $this->existingAttachments = $ticket->attachments
+                ->map(function ($att) {
+                    return [
+                        'id' => $att->id,
+                        'name' => $att->original_name,
+                        'size' => $att->human_file_size,
+                    ];
+                })
+                ->toArray();
         }
 
-        return $query->orderBy('service_type')->get();
-    }
-
-    // Make sure these properties are NOT cached
-    // Remove #[Computed] attribute if exists
-
-    public function getCostCentersProperty()
-    {
-        return CostCenter::active()->orderBy('code')->get();
-    }
-
-    public function getUomsProperty()
-    {
-        return UOM::active()->orderBy('code')->get();
-    }
-
-    public function getDepartmentsProperty()
-    {
-        $user = Auth::user();
-
-        if ($user->isSuperAdmin()) {
-            return Department::active()->get();
-        }
-
-        return Department::active()->whereIn('id', $user->getDepartmentIds())->get();
-    }
-
-    public function getProgressPercentageProperty()
-    {
-        return round(($this->currentStep / $this->totalSteps) * 100);
+        // Calculate totals
+        $this->calculateTotals();
     }
 
     // ==========================================
     // Step Navigation
     // ==========================================
 
-    // public function nextStep()
-    // {
-    //     // Validate current step before proceeding
-    //     if (!$this->validateCurrentStep()) {
-    //         return;
-    //     }
-
-    //     if ($this->currentStep < $this->totalSteps) {
-    //         $this->currentStep++;
-    //         $this->validatedSteps[] = $this->currentStep - 1;
-    //     }
-    // }
-
+    /**
+     * Move to next step with validation
+     */
     public function nextStep()
     {
-        try {
-            // Validate current step
-            $this->validateCurrentStep();
+        // Validate current step
+        $this->validateCurrentStep();
 
-            // Mark step as validated
-            $this->validatedSteps[] = $this->currentStep;
+        // Mark step as validated
+        $this->validatedSteps[] = $this->currentStep;
 
-            // Move to next step
-            if ($this->currentStep < $this->totalSteps) {
-                $this->currentStep++;
-            }
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            // Show validation errors in toast
-            $errors = $e->validator->errors()->all();
-            $errorMessage = implode("\n", $errors);
-
-            $this->dispatch('toast', [
-                'type' => 'error',
-                'message' => $errorMessage,
-                'title' => 'Validation Error',
-            ]);
-
-            // Re-throw to show field errors
-            throw $e;
+        // Move forward
+        if ($this->currentStep < $this->totalSteps) {
+            $this->currentStep++;
         }
     }
 
+    /**
+     * Move to previous step
+     */
     public function previousStep()
     {
         if ($this->currentStep > 1) {
@@ -297,35 +251,63 @@ class CreateFinanceTicket extends Component
         }
     }
 
+    /**
+     * Jump to specific step
+     * Only allowed if previous steps are validated
+     */
     public function goToStep($step)
     {
-        if ($this->currentStep < $step)    {
-        $this->validateCurrentStep();
-    $this->validatedSteps[] = $this->currentStep;
+        // Validate range
+        if ($step < 1 || $step > $this->totalSteps) {
+            return;
         }
 
-
-            if ($step >= 1 && $step <= $this->totalSteps) {
-                // Can only jump to already validated steps or next step
-                $maxValidated = !empty($this->validatedSteps) ? max($this->validatedSteps) : 0;
-                if (in_array($step - 1, $this->validatedSteps) || $step <= $maxValidated + 2) {
-                    $this->currentStep = $step;
+        // Moving forward - validate current step first
+        if ($step > $this->currentStep) {
+            try {
+                $this->validateCurrentStep();
+                if (!in_array($this->currentStep, $this->validatedSteps)) {
+                    $this->validatedSteps[] = $this->currentStep;
                 }
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                $this->dispatch('toast', [
+                    'type' => 'error',
+                    'message' => 'Please fix validation errors before proceeding.',
+                    'title' => 'Validation Error',
+                ]);
+                throw $e;
             }
+        }
+
+        // Update current step
+        $this->currentStep = $step;
     }
 
-    private function validateCurrentStep()
+    /**
+     * Get progress percentage for progress bar
+     */
+    public function getProgressPercentageProperty()
     {
-        // dd($this);
+        return ($this->currentStep / $this->totalSteps) * 100;
+    }
 
+    // ==========================================
+    // Validation
+    // ==========================================
+
+    /**
+     * Validate current step
+     */
+    protected function validateCurrentStep()
+    {
         if ($this->currentStep === 1) {
             $this->validate(
                 [
-                    'ticket_date' => 'required|date',
+                    'ticket_date' => 'required|date|before_or_equal:today',
                     'department_id' => 'required|exists:departments,id',
                     'client_type' => 'required|in:client,cost_center',
-                    'client_id' => 'required_if:client_type,client|nullable|exists:clients,id',
-                    'cost_center_id' => 'required_if:client_type,cost_center|nullable|exists:cost_centers,id',
+                    'client_id' => 'required_if:client_type,client|exists:clients,id',
+                    'cost_center_id' => 'required_if:client_type,cost_center|exists:cost_centers,id',
                     'payment_type' => 'required|in:po,cash,credit_card,na',
                     'currency' => 'required|in:usd,aed,euro,others',
                 ],
@@ -333,9 +315,8 @@ class CreateFinanceTicket extends Component
                     'client_id.required_if' => 'Please select a client.',
                     'cost_center_id.required_if' => 'Please select a cost center.',
                     'ticket_date.required' => 'Ticket date is required.',
+                    'ticket_date.before_or_equal' => 'Ticket date cannot be in the future.',
                     'department_id.required' => 'Department is required.',
-                    'payment_type.required' => 'Payment type is required.',
-                    'currency.required' => 'Currency is required.',
                 ],
             );
         }
@@ -345,14 +326,15 @@ class CreateFinanceTicket extends Component
                 [
                     'transactions' => 'required|array|min:1',
                     'transactions.*.description' => 'required|string|max:500',
-                    'transactions.*.qty' => 'required|numeric|min:0',
+                    'transactions.*.qty' => 'required|numeric|min:0.001',
                     'transactions.*.uom_id' => 'required|exists:uom,id',
                     'transactions.*.unit_cost' => 'required|numeric|min:0',
                 ],
                 [
-                    'transactions.required' => 'At least one transaction is required.',
+                    'transactions.required' => 'At least one line item is required.',
                     'transactions.*.description.required' => 'Description is required for all items.',
                     'transactions.*.qty.required' => 'Quantity is required for all items.',
+                    'transactions.*.qty.min' => 'Quantity must be greater than 0.',
                     'transactions.*.uom_id.required' => 'UOM is required for all items.',
                     'transactions.*.unit_cost.required' => 'Unit cost is required for all items.',
                 ],
@@ -360,14 +342,439 @@ class CreateFinanceTicket extends Component
         }
     }
 
+    /**
+     * Get all validation rules (for final save)
+     */
+    protected function getAllValidationRules()
+    {
+        return [
+            'ticket_date' => 'required|date|before_or_equal:today',
+            'department_id' => 'required|exists:departments,id',
+            'client_type' => 'required|in:client,cost_center',
+            'client_id' => 'required_if:client_type,client|exists:clients,id',
+            'cost_center_id' => 'required_if:client_type,cost_center|exists:cost_centers,id',
+            'payment_type' => 'required|in:po,cash,credit_card,na',
+            'currency' => 'required|in:usd,aed,euro,others',
+            'transactions' => 'required|array|min:1',
+            'transactions.*.description' => 'required|string|max:500',
+            'transactions.*.qty' => 'required|numeric|min:0.001',
+            'transactions.*.uom_id' => 'required|exists:uom,id',
+            'transactions.*.unit_cost' => 'required|numeric|min:0',
+        ];
+    }
+
     // ==========================================
-    // Line Items Management (Alpine.js assisted)
+    // Save Operations
     // ==========================================
 
-    public function addLineItem()
+    /**
+     * Save ticket as DRAFT
+     *
+     * OPTION C: Drafts get DRAFT-xxx IDs (no sequential number)
+     * They can be freely deleted without affecting sequence
+     */
+    public function saveDraft()
+    {
+        // Validate all fields
+        $this->validate($this->getAllValidationRules());
+
+        DB::transaction(function () {
+            if ($this->editMode) {
+                // Update existing ticket
+                $ticket = TicketMaster::findOrFail($this->ticketId);
+
+                // Capture old state for logging
+                $oldTicketNo = $ticket->ticket_no;
+
+                $this->updateTicket($ticket);
+
+                // Log update
+                $activityLog = app(ActivityLogService::class);
+                $activityLog->log(description: "Updated ticket {$oldTicketNo}", subject: $ticket, event: 'updated', logName: 'tickets');
+
+                $message = 'Ticket updated successfully!';
+            } else {
+                // Create new DRAFT ticket
+                $ticket = $this->createDraftTicket();
+
+                $message = 'Ticket saved as draft successfully!';
+            }
+
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => $message,
+                'title' => 'Success',
+            ]);
+
+            return redirect()->route('tickets.finance.index');
+        });
+    }
+
+    /**
+     * Save ticket and immediately POST it
+     *
+     * OPTION C: ONLY posted tickets get sequential numbers
+     * This is where the TicketNumberService is called
+     */
+    public function saveAndPost()
+    {
+        // Validate all fields
+        $this->validate($this->getAllValidationRules());
+
+        // Admin check
+        if (!Auth::user()->isAdmin()) {
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Only Admins can post tickets.',
+            ]);
+            return;
+        }
+
+        DB::transaction(function () {
+            if ($this->editMode) {
+                // Update existing ticket
+                $ticket = TicketMaster::findOrFail($this->ticketId);
+
+                $oldTicketNo = $ticket->ticket_no;
+                $oldStatus = $ticket->status;
+
+                // If draft being posted for first time, assign sequential number NOW
+                if ($ticket->status === TicketStatus::DRAFT && str_starts_with($ticket->ticket_no, 'DRAFT-')) {
+                    // Replace DRAFT-xxx with sequential number
+                    $department = Department::findOrFail($this->department_id);
+                    $ticket->ticket_no = $this->ticketNumberService->generateTicketNumber($this->department_id);
+                    $ticket->prefix = $department->prefix;
+                }
+
+                $this->updateTicket($ticket);
+
+                // Change status to POSTED
+                $ticket->status = TicketStatus::POSTED;
+                $ticket->posted_date = now();
+                $ticket->save();
+
+                // Log status change
+                $this->logStatusChange($ticket, $oldStatus, TicketStatus::POSTED, 'Ticket posted');
+
+                // Log activity
+                $activityLog = app(ActivityLogService::class);
+                $activityLog->log(
+                    description: "Posted ticket {$ticket->ticket_no}" . ($oldTicketNo !== $ticket->ticket_no ? " (was {$oldTicketNo})" : ''),
+                    subject: $ticket,
+                    event: 'posted',
+                    properties: [
+                        'old_ticket_no' => $oldTicketNo,
+                        'new_ticket_no' => $ticket->ticket_no,
+                        'old_status' => $oldStatus->value,
+                        'new_status' => TicketStatus::POSTED->value,
+                    ],
+                    logName: 'tickets',
+                );
+
+                // Send notification
+                try {
+                    $ticket->user->notify(new TicketPostedNotification($ticket));
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send post notification: ' . $e->getMessage());
+                }
+            } else {
+                // Create new ticket and POST immediately
+                $ticket = $this->createPostedTicket();
+
+                // Log status change
+                $this->logStatusChange($ticket, null, TicketStatus::POSTED, 'Ticket created and posted');
+            }
+
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => 'Ticket posted successfully!',
+                'title' => 'Success',
+            ]);
+
+            return redirect()->route('tickets.finance.index');
+        });
+    }
+
+    /**
+     * Create a DRAFT ticket
+     *
+     * OPTION C: Draft tickets get DRAFT-{uniqid} as ticket number
+     * NO sequential number assigned yet
+     * Can be freely deleted without affecting the sequence
+     */
+    protected function createDraftTicket()
+    {
+        $department = Department::findOrFail($this->department_id);
+
+        // OPTION C: Generate temporary DRAFT ID (not sequential)
+        $draftId = 'DRAFT-' . uniqid();
+
+        $ticketData = [
+            // IMPORTANT: DRAFT-xxx instead of sequential number
+            'ticket_no' => $draftId,
+            'prefix' => 'DRAFT', // Temporary prefix
+            'ticket_type' => TicketType::FINANCE,
+            'ticket_date' => $this->ticket_date,
+            'department_id' => $this->department_id,
+            'user_id' => Auth::id(),
+            'user_name' => Auth::user()->name,
+            'host_name' => request()->ip(),
+            'client_type' => $this->client_type,
+            'client_id' => $this->client_type === 'client' ? $this->client_id : null,
+            'cost_center_id' => $this->client_type === 'cost_center' ? $this->cost_center_id : null,
+            'project_code' => $this->project_code ?: null,
+            'contract_no' => $this->contract_no ?: null,
+            'service_location' => $this->service_location ?: null,
+            'service_type_id' => $this->service_type_id,
+            'ref_no' => $this->ref_no ?: null,
+            'payment_terms' => $this->payment_terms ?: null,
+            'payment_type' => $this->payment_type,
+            'currency' => $this->currency,
+            'vat_percentage' => $this->vat_percentage,
+            'remarks' => $this->remarks ?: null,
+            'status' => TicketStatus::DRAFT,
+            'created_by' => Auth::id(),
+        ];
+
+        $ticket = TicketMaster::create($ticketData);
+
+        // Save line items
+        $this->saveTransactions($ticket);
+
+        // Save attachments
+        $this->saveAttachments($ticket);
+
+        // Calculate and update totals
+        $ticket->calculateTotals();
+
+        // Log creation
+        $this->logStatusChange($ticket, null, TicketStatus::DRAFT, 'Draft ticket created');
+
+        // OPTION C: Add activity log
+        $activityLog = app(ActivityLogService::class);
+        $activityLog->logCreated($ticket, "Created draft ticket {$draftId} for " . ($this->client_type === 'client' ? Client::find($this->client_id)?->client_name : CostCenter::find($this->cost_center_id)?->name));
+
+        Log::info("Draft ticket created with temporary ID: {$draftId} by " . Auth::user()->name);
+
+        return $ticket;
+    }
+
+    /**
+     * Create a POSTED ticket (new ticket being posted immediately)
+     *
+     * OPTION C: Posted tickets get SEQUENTIAL numbers
+     * This is where TicketNumberService.generateTicketNumber() is called
+     */
+    protected function createPostedTicket()
+    {
+        $department = Department::findOrFail($this->department_id);
+
+        // OPTION C: Generate sequential number using service (with database locking)
+        // This is the ONLY place where sequential numbers are assigned
+        $sequentialNumber = $this->ticketNumberService->generateTicketNumber($this->department_id);
+
+        $ticketData = [
+            // IMPORTANT: Sequential number assigned HERE
+            'ticket_no' => $sequentialNumber,
+            'prefix' => $department->prefix,
+            'ticket_type' => TicketType::FINANCE,
+            'ticket_date' => $this->ticket_date,
+            'department_id' => $this->department_id,
+            'user_id' => Auth::id(),
+            'user_name' => Auth::user()->name,
+            'host_name' => request()->ip(),
+            'client_type' => $this->client_type,
+            'client_id' => $this->client_type === 'client' ? $this->client_id : null,
+            'cost_center_id' => $this->client_type === 'cost_center' ? $this->cost_center_id : null,
+            'project_code' => $this->project_code ?: null,
+            'contract_no' => $this->contract_no ?: null,
+            'service_location' => $this->service_location ?: null,
+            'service_type_id' => $this->service_type_id,
+            'ref_no' => $this->ref_no ?: null,
+            'payment_terms' => $this->payment_terms ?: null,
+            'payment_type' => $this->payment_type,
+            'currency' => $this->currency,
+            'vat_percentage' => $this->vat_percentage,
+            'remarks' => $this->remarks ?: null,
+            'status' => TicketStatus::POSTED,
+            'posted_date' => now(),
+            'created_by' => Auth::id(),
+        ];
+
+        $ticket = TicketMaster::create($ticketData);
+
+        // Save line items
+        $this->saveTransactions($ticket);
+
+        // Save attachments
+        $this->saveAttachments($ticket);
+
+        // Calculate and update totals
+        $ticket->calculateTotals();
+
+        // OPTION C: Add activity log
+        $activityLog = app(ActivityLogService::class);
+        $activityLog->logCreated($ticket, "Created and posted ticket {$sequentialNumber} for " . ($this->client_type === 'client' ? Client::find($this->client_id)?->client_name : CostCenter::find($this->cost_center_id)?->name));
+
+        // Send notification
+        try {
+            $ticket->user->notify(new TicketPostedNotification($ticket));
+        } catch (\Exception $e) {
+            Log::error('Failed to send post notification: ' . $e->getMessage());
+        }
+
+        Log::info("Posted ticket created with sequential number: {$sequentialNumber} by " . Auth::user()->name);
+
+        return $ticket;
+    }
+
+    /**
+     * Update existing ticket (edit mode)
+     */
+    protected function updateTicket($ticket)
+    {
+        // CRITICAL: Capture old attributes BEFORE any changes for activity logging
+        $oldAttributes = [
+            'ticket_date' => $ticket->ticket_date?->format('Y-m-d'),
+            'client_type' => $ticket->client_type->value ?? null,
+            'client_id' => $ticket->client_id,
+            'cost_center_id' => $ticket->cost_center_id,
+            'project_code' => $ticket->project_code,
+            'contract_no' => $ticket->contract_no,
+            'service_location' => $ticket->service_location,
+            'service_type_id' => $ticket->service_type_id,
+            'ref_no' => $ticket->ref_no,
+            'payment_terms' => $ticket->payment_terms,
+            'payment_type' => $ticket->payment_type->value ?? null,
+            'currency' => $ticket->currency->value ?? null,
+            'vat_percentage' => $ticket->vat_percentage,
+            'remarks' => $ticket->remarks,
+            'transaction_count' => $ticket->transactions()->count(),
+        ];
+
+        // Update header data
+        $ticket->ticket_date = $this->ticket_date;
+        $ticket->client_type = $this->client_type;
+        $ticket->client_id = $this->client_type === 'client' ? $this->client_id : null;
+        $ticket->cost_center_id = $this->client_type === 'cost_center' ? $this->cost_center_id : null;
+        $ticket->project_code = $this->project_code ?: null;
+        $ticket->contract_no = $this->contract_no ?: null;
+        $ticket->service_location = $this->service_location ?: null;
+        $ticket->service_type_id = $this->service_type_id;
+        $ticket->ref_no = $this->ref_no ?: null;
+        $ticket->payment_terms = $this->payment_terms ?: null;
+        $ticket->payment_type = $this->payment_type;
+        $ticket->currency = $this->currency;
+        $ticket->vat_percentage = $this->vat_percentage;
+        $ticket->remarks = $this->remarks ?: null;
+        $ticket->updated_by = Auth::id();
+        $ticket->save();
+
+        // Delete old transactions
+        $ticket->transactions()->delete();
+
+        // Save new transactions
+        $this->saveTransactions($ticket);
+
+        // Save new attachments
+        $this->saveAttachments($ticket);
+
+        // Recalculate totals
+        $ticket->calculateTotals();
+
+        // Activity log
+        try {
+            $activityLog = app(ActivityLogService::class);
+            $activityLog->logUpdated($ticket, $oldAttributes, "Updated ticket {$ticket->ticket_no}");
+        } catch (\Exception $e) {
+            \Log::error('Failed to log activity: ' . $e->getMessage());
+            // Don't fail the update if logging fails
+        }
+    }
+
+    /**
+     * Save transaction line items
+     */
+    protected function saveTransactions($ticket)
+    {
+        foreach ($this->transactions as $index => $trans) {
+            TicketTransaction::create([
+                'ticket_id' => $ticket->id,
+                'sr_no' => $index + 1,
+                'description' => $trans['description'],
+                'qty' => $trans['qty'],
+                'uom_id' => $trans['uom_id'],
+                'unit_cost' => $trans['unit_cost'],
+                'total_cost' => $trans['qty'] * $trans['unit_cost'],
+                'created_by' => Auth::id(),
+            ]);
+        }
+    }
+
+    /**
+     * Save file attachments
+     */
+    protected function saveAttachments($ticket)
+    {
+        if (empty($this->attachments)) {
+            return;
+        }
+
+        foreach ($this->attachments as $file) {
+            // Generate unique filename
+            $originalName = $file->getClientOriginalName();
+            $extension = $file->getClientOriginalExtension();
+            $storedName = $ticket->ticket_no . '_' . now()->format('YmdHis') . '_' . uniqid() . '.' . $extension;
+
+            // Store file
+            $path = $file->storeAs('attachments/' . now()->format('Y/m'), $storedName, 'public');
+
+            // Determine file type
+            $mimeType = $file->getMimeType();
+            $fileType = str_starts_with($mimeType, 'image/') ? 'image' : 'document';
+
+            // Save to database
+            TicketAttachment::create([
+                'ticket_id' => $ticket->id,
+                'original_name' => $originalName,
+                'stored_name' => $storedName,
+                'file_path' => $path,
+                'mime_type' => $mimeType,
+                'file_size' => $file->getSize(),
+                'file_type' => $fileType,
+                'uploaded_by' => Auth::id(),
+            ]);
+        }
+    }
+
+    /**
+     * Log ticket status change to history
+     */
+    protected function logStatusChange($ticket, $fromStatus, $toStatus, $notes = null)
+    {
+        TicketStatusHistory::create([
+            'ticket_id' => $ticket->id,
+            'from_status' => $fromStatus?->value,
+            'to_status' => $toStatus->value,
+            'notes' => $notes,
+            'changed_by' => Auth::id(),
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'changed_at' => now(),
+        ]);
+    }
+
+    // ==========================================
+    // Line Items Management
+    // ==========================================
+
+    /**
+     * Add new transaction row
+     */
+    public function addTransaction()
     {
         $this->transactions[] = [
-            'temp_id' => (string) Str::uuid(),
+            'temp_id' => uniqid(),
             'sr_no' => count($this->transactions) + 1,
             'description' => '',
             'qty' => 1,
@@ -377,48 +784,38 @@ class CreateFinanceTicket extends Component
         ];
     }
 
-    public function removeLineItem($index)
+    /**
+     * Remove transaction row
+     */
+    public function removeTransaction($index)
     {
         unset($this->transactions[$index]);
-        $this->transactions = array_values($this->transactions); // Re-index array
+        $this->transactions = array_values($this->transactions); // Re-index
 
         // Update serial numbers
-        foreach ($this->transactions as $key => $transaction) {
-            $this->transactions[$key]['sr_no'] = $key + 1;
+        foreach ($this->transactions as $i => &$trans) {
+            $trans['sr_no'] = $i + 1;
         }
 
         $this->calculateTotals();
     }
 
-    public function duplicateLineItem($index)
-    {
-        if (isset($this->transactions[$index])) {
-            $item = $this->transactions[$index];
-            $item['temp_id'] = (string) Str::uuid();
-            $item['sr_no'] = count($this->transactions) + 1;
-            $this->transactions[] = $item;
-        }
-    }
-
+    /**
+     * Update transaction when qty or unit_cost changes
+     */
     public function updatedTransactions()
     {
+        // Recalculate line totals
+        foreach ($this->transactions as &$trans) {
+            $trans['total_cost'] = $trans['qty'] * $trans['unit_cost'];
+        }
+
         $this->calculateTotals();
     }
 
-    public function calculateLineItemTotal($index)
-    {
-        if (isset($this->transactions[$index])) {
-            $qty = (float) ($this->transactions[$index]['qty'] ?? 0);
-            $unitCost = (float) ($this->transactions[$index]['unit_cost'] ?? 0);
-            $this->transactions[$index]['total_cost'] = $qty * $unitCost;
-            $this->calculateTotals();
-        }
-    }
-
-    // ==========================================
-    // Calculations
-    // ==========================================
-
+    /**
+     * Calculate ticket totals (subtotal, VAT, grand total)
+     */
     public function calculateTotals()
     {
         // Calculate subtotal
@@ -427,90 +824,96 @@ class CreateFinanceTicket extends Component
         // Calculate VAT
         $this->vat_amount = ($this->subtotal * $this->vat_percentage) / 100;
 
-        // Calculate total
+        // Calculate grand total
         $this->total_amount = $this->subtotal + $this->vat_amount;
     }
 
+    /**
+     * Update VAT percentage
+     */
     public function updatedVatPercentage()
     {
         $this->calculateTotals();
     }
 
     // ==========================================
-    // Department & Client Type Changes
+    // Quick Add Modals
     // ==========================================
 
-    public function updatedDepartmentId()
+    public function openQuickAddClient()
     {
-        // Reset dependent fields
-        $this->service_type_id = null;
-
-        // Update preview ticket number
-        $this->updatePreviewTicketNumber();
+        $this->showQuickAddClient = true;
     }
 
-    public function updatedClientType()
+    public function closeQuickAddClient()
     {
-        // Reset selected client/cost center
-        $this->client_id = null;
-        $this->cost_center_id = null;
+        $this->showQuickAddClient = false;
     }
 
-    private function updatePreviewTicketNumber()
+    public function openQuickAddUom()
     {
-        if ($this->department_id) {
-            $service = app(TicketNumberService::class);
-            $this->previewTicketNumber = $service->previewNextNumber($this->department_id);
+        $this->showQuickAddUOM = true;
+    }
+
+    public function closeQuickAddUom()
+    {
+        $this->showQuickAddUOM = false;
+    }
+
+    public function openQuickAddServiceType()
+    {
+        $this->showQuickAddServiceType = true;
+    }
+
+    public function closeQuickAddServiceType()
+    {
+        $this->showQuickAddServiceType = false;
+    }
+
+    // Handle events from quick add modals
+    protected $listeners = [
+        'client-created' => 'handleClientCreated',
+        'uom-created' => 'handleUomCreated',
+        'service-type-created' => 'handleServiceTypeCreated',
+        'close-quick-add-client' => 'closeQuickAddClient',
+        'close-quick-add-uom' => 'closeQuickAddUom',
+        'close-quick-add-service-type' => 'closeQuickAddServiceType',
+    ];
+
+    public function handleClientCreated($data)
+    {
+        $this->client_id = $data['clientId'];
+        $this->closeQuickAddClient();
+    }
+
+    public function handleUomCreated($data)
+    {
+        // Refresh UOMs list
+        $this->closeQuickAddUom();
+    }
+
+    public function handleServiceTypeCreated($data)
+    {
+        $this->service_type_id = $data['serviceTypeId'];
+        $this->closeQuickAddServiceType();
+    }
+
+    // ==========================================
+    // Auto-save & Draft Management
+    // ==========================================
+
+    /**
+     * Auto-save draft to session (every 30 seconds via JS)
+     */
+    public function autoSaveDraft()
+    {
+        if (!$this->autoSaveEnabled || $this->editMode) {
+            return;
         }
-    }
 
-    // ==========================================
-    // File Upload Management
-    // ==========================================
-
-    public function updatedAttachments()
-    {
-        // Validate each file as it's uploaded
-        $this->validate([
-            'attachments.*' => 'file|max:5120|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx',
-        ]);
-    }
-
-    public function removeAttachment($index)
-    {
-        unset($this->attachments[$index]);
-        $this->attachments = array_values($this->attachments);
-    }
-
-    public function removeExistingAttachment($attachmentId)
-    {
-        try {
-            $attachment = TicketAttachment::find($attachmentId);
-            if ($attachment) {
-                $attachment->delete();
-                $this->existingAttachments = collect($this->existingAttachments)->reject(fn($att) => $att['id'] === $attachmentId)->values()->toArray();
-
-                $this->dispatch('toast', type: 'success', message: 'Attachment removed.');
-            }
-        } catch (\Exception $e) {
-            $this->dispatch('toast', type: 'error', message: 'Failed to remove attachment.');
-        }
-    }
-
-    // ==========================================
-    // Auto-Save Draft
-    // ==========================================
-
-    private function autoSaveDraft()
-    {
-        if ($this->editMode) {
-            return; // Don't auto-save in edit mode
-        }
-
-        try {
-            $autoSaveService = app(TicketAutoSaveService::class);
-
-            $autoSaveService->saveDraft(Auth::id(), [
+        // Save to session
+        session()->put('finance_ticket_draft', [
+            'data' => [
                 'ticket_date' => $this->ticket_date,
                 'department_id' => $this->department_id,
                 'client_type' => $this->client_type,
@@ -527,442 +930,111 @@ class CreateFinanceTicket extends Component
                 'transactions' => $this->transactions,
                 'vat_percentage' => $this->vat_percentage,
                 'remarks' => $this->remarks,
-            ]);
-
-            $this->lastSaved = now()->format('H:i:s');
-        } catch (\Exception $e) {
-            \Log::error('Auto-save failed: ' . $e->getMessage());
-        }
-    }
-
-    private function checkAutoSavedDraft()
-    {
-        $autoSaveService = app(TicketAutoSaveService::class);
-
-        if ($autoSaveService->hasDraft(Auth::id())) {
-            $draft = $autoSaveService->getDraft(Auth::id());
-
-            // Ask user if they want to restore
-            $this->dispatch('confirm-restore-draft', draft: $draft);
-        }
-    }
-
-    #[On('restore-draft')]
-    public function restoreDraft($draft)
-    {
-        foreach ($draft['data'] as $key => $value) {
-            if (property_exists($this, $key)) {
-                $this->$key = $value;
-            }
-        }
-
-        $this->calculateTotals();
-        $this->dispatch('toast', type: 'success', message: 'Draft restored successfully!');
-    }
-
-    #[On('discard-draft')]
-    public function discardDraft()
-    {
-        $autoSaveService = app(TicketAutoSaveService::class);
-        $autoSaveService->clearDraft(Auth::id());
-
-        $this->dispatch('toast', type: 'info', message: 'Draft discarded.');
-    }
-
-    // ==========================================
-    // Save Actions
-    // ==========================================
-
-    public function saveDraft()
-    {
-        $this->save(false);
-    }
-
-    public function saveAndPost()
-    {
-        $this->save(true);
-    }
-
-    private function save($postImmediately = false)
-    {
-        // Final validation
-        $this->validate();
-
-        if (empty($this->transactions)) {
-            $this->dispatch('toast', type: 'error', message: 'Please add at least one line item.');
-            return;
-        }
-
-        try {
-            DB::transaction(function () use ($postImmediately) {
-                $ticketNumberService = app(TicketNumberService::class);
-
-                if ($this->editMode) {
-                    // Update existing ticket
-                    $ticket = TicketMaster::findOrFail($this->ticketId);
-
-                    // Only allow editing drafts
-                    if (!$ticket->canEdit()) {
-                        throw new \Exception('This ticket cannot be edited.');
-                    }
-
-                    $this->updateTicket($ticket);
-                } else {
-                    // Create new ticket
-                    $ticketNumber = $ticketNumberService->reserveTicketNumber($this->department_id);
-
-                    $ticket = $this->createTicket($ticketNumber['number']);
-                }
-
-                // Save line items
-                $this->saveTransactions($ticket);
-
-                // Save attachments
-                $this->saveAttachments($ticket);
-
-                // Post if requested and user has permission
-                if ($postImmediately && Auth::user()->isAdmin()) {
-                    $this->postTicket($ticket);
-                }
-
-                // Clear auto-saved draft
-                if (!$this->editMode) {
-                    $autoSaveService = app(TicketAutoSaveService::class);
-                    $autoSaveService->clearDraft(Auth::id());
-                }
-
-                $message = $this->editMode ? 'Ticket updated successfully!' : 'Ticket created successfully!';
-                $this->dispatch('toast', type: 'success', message: $message);
-
-                // Redirect to list
-                return redirect()->route('tickets.finance.index');
-            });
-        } catch (\Exception $e) {
-            \Log::error('Error saving ticket: ' . $e->getMessage());
-            $this->dispatch('toast', type: 'error', message: 'Failed to save ticket: ' . $e->getMessage());
-        }
-    }
-
-    private function createTicket($ticketNumber): TicketMaster
-    {
-        $department = Department::find($this->department_id);
-
-        return TicketMaster::create([
-            'prefix' => $department->prefix,
-            'ticket_no' => $ticketNumber,
-            'ticket_type' => TicketType::FINANCE,
-            'ticket_date' => $this->ticket_date,
-            'department_id' => $this->department_id,
-            'user_id' => Auth::id(),
-            'user_name' => Auth::user()->name,
-            'host_name' => request()->ip(),
-            'client_type' => ClientType::from($this->client_type),
-            'client_id' => $this->client_id,
-            'cost_center_id' => $this->cost_center_id,
-            'project_code' => $this->project_code,
-            'contract_no' => $this->contract_no,
-            'service_location' => $this->service_location,
-            'service_type_id' => $this->service_type_id,
-            'ref_no' => $this->ref_no,
-            'payment_terms' => $this->payment_terms,
-            'payment_type' => PaymentType::from($this->payment_type),
-            'currency' => Currency::from($this->currency),
-            'subtotal' => $this->subtotal,
-            'vat_percentage' => $this->vat_percentage,
-            'vat_amount' => $this->vat_amount,
-            'total_amount' => $this->total_amount,
-            'remarks' => $this->remarks,
-            'status' => TicketStatus::DRAFT,
-            'created_by' => Auth::id(),
-        ]);
-    }
-
-    private function updateTicket(TicketMaster $ticket): void
-    {
-        $ticket->update([
-            'ticket_date' => $this->ticket_date,
-            'client_type' => ClientType::from($this->client_type),
-            'client_id' => $this->client_id,
-            'cost_center_id' => $this->cost_center_id,
-            'project_code' => $this->project_code,
-            'contract_no' => $this->contract_no,
-            'service_location' => $this->service_location,
-            'service_type_id' => $this->service_type_id,
-            'ref_no' => $this->ref_no,
-            'payment_terms' => $this->payment_terms,
-            'payment_type' => PaymentType::from($this->payment_type),
-            'currency' => Currency::from($this->currency),
-            'subtotal' => $this->subtotal,
-            'vat_percentage' => $this->vat_percentage,
-            'vat_amount' => $this->vat_amount,
-            'total_amount' => $this->total_amount,
-            'remarks' => $this->remarks,
-            'updated_by' => Auth::id(),
-        ]);
-    }
-
-    private function saveTransactions(TicketMaster $ticket): void
-    {
-        // Delete existing transactions if editing
-        if ($this->editMode) {
-            $ticket->transactions()->delete();
-        }
-
-        foreach ($this->transactions as $index => $transaction) {
-            TicketTransaction::create([
-                'ticket_id' => $ticket->id,
-                'sr_no' => $index + 1,
-                'description' => $transaction['description'],
-                'qty' => $transaction['qty'],
-                'uom_id' => $transaction['uom_id'],
-                'unit_cost' => $transaction['unit_cost'],
-                'total_cost' => $transaction['total_cost'],
-                'created_by' => Auth::id(),
-            ]);
-        }
-    }
-
-    private function saveAttachments(TicketMaster $ticket): void
-    {
-        foreach ($this->attachments as $file) {
-            try {
-                // Generate unique filename
-                $originalName = $file->getClientOriginalName();
-                $extension = $file->getClientOriginalExtension();
-                $storedName = $ticket->ticket_no . '_' . time() . '_' . Str::random(8) . '.' . $extension;
-
-                // Store file
-                $path = $file->storeAs('attachments/' . date('Y/m'), $storedName, 'public');
-
-                // Save to database
-                TicketAttachment::create([
-                    'ticket_id' => $ticket->id,
-                    'original_name' => $originalName,
-                    'stored_name' => $storedName,
-                    'file_path' => $path,
-                    'mime_type' => $file->getMimeType(),
-                    'file_size' => $file->getSize(),
-                    'file_type' => $this->determineFileType($file->getMimeType()),
-                    'uploaded_by' => Auth::id(),
-                ]);
-            } catch (\Exception $e) {
-                \Log::error('Error saving attachment: ' . $e->getMessage());
-            }
-        }
-    }
-
-    private function determineFileType($mimeType): string
-    {
-        if (str_starts_with($mimeType, 'image/')) {
-            return 'image';
-        } elseif ($mimeType === 'application/pdf') {
-            return 'document';
-        } else {
-            return 'other';
-        }
-    }
-
-    private function postTicket(TicketMaster $ticket): void
-    {
-        $ticket->update([
-            'status' => TicketStatus::POSTED,
-            'posted_date' => now(),
+            ],
+            'timestamp' => now()->toISOString(),
         ]);
 
-        //ReviseThis is commented out for now. We can enable it later if needed.
-        // Send notification
-        // try {
-        //     $ticket->user->notify(new TicketPostedNotification($ticket));
-        // } catch (\Exception $e) {
-        //     \Log::error('Failed to send post notification: ' . $e->getMessage());
-        // }
+        $this->lastSaved = now()->format('H:i:s');
+    }
+
+    /**
+     * Check if there's a draft in session on mount
+     */
+    protected function checkForDraft()
+    {
+        if ($this->editMode || session()->has('finance_ticket_draft')) {
+            $draft = session('finance_ticket_draft');
+            $this->dispatch('confirm-restore-draft', ['draft' => $draft]);
+        }
     }
 
     // ==========================================
-    // Load Ticket (Edit/Duplicate Mode)
+    // Computed Properties
     // ==========================================
 
-    private function loadTicket($ticketId, $duplicate = false)
+    public function getClientsProperty()
     {
-        $ticket = TicketMaster::with(['transactions', 'attachments'])->findOrFail($ticketId);
-
-        // Check permissions
-        if (!$ticket->canEdit() && !$duplicate) {
-            abort(403, 'You cannot edit this ticket.');
-        }
-
-        $this->editMode = !$duplicate;
-        $this->isDuplicate = $duplicate;
-        $this->ticketId = $duplicate ? null : $ticket->id;
-
-        // Load header data
-        $this->ticket_date = $duplicate ? now()->format('Y-m-d') : $ticket->ticket_date->format('Y-m-d');
-        $this->department_id = $ticket->department_id;
-        $this->client_type = $ticket->client_type->value;
-        $this->client_id = $ticket->client_id;
-        $this->cost_center_id = $ticket->cost_center_id;
-        $this->project_code = $ticket->project_code;
-        $this->contract_no = $ticket->contract_no;
-        $this->service_location = $ticket->service_location;
-        $this->service_type_id = $ticket->service_type_id;
-        $this->ref_no = $ticket->ref_no;
-        $this->payment_terms = $ticket->payment_terms;
-        $this->payment_type = $ticket->payment_type->value;
-        $this->currency = $ticket->currency->value;
-        $this->vat_percentage = $ticket->vat_percentage;
-        $this->remarks = $ticket->remarks;
-
-        // Load transactions
-        $this->transactions = $ticket->transactions
-            ->map(function ($trans) {
-                return [
-                    'temp_id' => (string) Str::uuid(),
-                    'sr_no' => $trans->sr_no,
-                    'description' => $trans->description,
-                    'qty' => $trans->qty,
-                    'uom_id' => $trans->uom_id,
-                    'unit_cost' => $trans->unit_cost,
-                    'total_cost' => $trans->total_cost,
-                ];
-            })
+        return Client::where('department_id', $this->department_id)
+            ->where('is_active', true)
+            ->orderBy('client_name')
+            ->get()
+            ->map(
+                fn($client) => [
+                    'value' => $client->id,
+                    'label' => $client->full_name,
+                ],
+            )
             ->toArray();
+    }
 
-        // Load existing attachments (don't duplicate attachments)
-        if (!$duplicate) {
-            $this->existingAttachments = $ticket->attachments
-                ->map(function ($att) {
-                    return [
-                        'id' => $att->id,
-                        'original_name' => $att->original_name,
-                        'file_size' => $att->file_size,
-                        'human_file_size' => $att->human_file_size,
-                        'file_type' => $att->file_type,
-                        'icon' => $att->icon,
-                    ];
-                })
-                ->toArray();
+    public function getCostCentersProperty()
+    {
+        return CostCenter::where('is_active', true)
+            ->orderBy('name')
+            ->get()
+            ->map(
+                fn($cc) => [
+                    'value' => $cc->id,
+                    'label' => $cc->full_name,
+                ],
+            )
+            ->toArray();
+    }
+
+    public function getServiceTypesProperty()
+    {
+        return ServiceType::where('department_id', $this->department_id)
+            ->where('is_active', true)
+            ->orderBy('service_type')
+            ->get()
+            ->map(
+                fn($st) => [
+                    'value' => $st->id,
+                    'label' => $st->service_type,
+                ],
+            )
+            ->toArray();
+    }
+
+    public function getUomsProperty()
+    {
+        return UOM::where('is_active', true)
+            ->orderBy('code')
+            ->get()
+            ->map(
+                fn($uom) => [
+                    'value' => $uom->id,
+                    'label' => $uom->code . ' - ' . $uom->name,
+                ],
+            )
+            ->toArray();
+    }
+
+    /**
+     * Get departments accessible by current user
+     */
+    public function getDepartmentsProperty()
+    {
+        $user = Auth::user();
+
+        if ($user->isSuperAdmin()) {
+            // Super admin can see all active departments
+            return Department::where('is_active', true)->orderBy('department')->get();
         }
 
-        $this->calculateTotals();
-
-        // Update preview ticket number for duplicates
-        if ($duplicate) {
-            $this->updatePreviewTicketNumber();
-        }
+        // Regular users see only their assigned departments
+        return $user->departments()->where('is_active', true)->orderBy('department')->get();
     }
-
-    public function openQuickAddUOM()
-    {
-        \Log::info('Opening Quick Add UOM modal');
-        $this->showQuickAddUOM = true;
-    }
-
-    #[On('close-quick-add-uom')]
-    public function closeQuickAddUOM()
-    {
-        \Log::info('Closing Quick Add UOM modal');
-        $this->showQuickAddUOM = false;
-    }
-
-    // Add method to open modal
-    public function openQuickAddClient()
+    /**
+     * Get currently selected department (single model)
+     */
+    public function getCurrentDepartmentProperty()
     {
         if (!$this->department_id) {
-            $this->dispatch('toast', type: 'warning', message: 'Please select a department first.');
-            return;
+            return null;
         }
 
-        $this->showQuickAddClient = true;
-    }
-
-    #[On('refresh-clients')]
-    public function refreshClients()
-    {
-        // Force refresh the clients property
-        $this->clients = null;
-        unset($this->clients);
-    }
-
-    // Update the existing listener
-    #[On('client-created')]
-    public function clientCreated($data)
-    {
-        \Log::info('Client created event received', $data);
-
-        // Set the client_id
-        $this->client_id = $data['clientId'];
-
-        // Close modal
-        $this->showQuickAddClient = false;
-
-        // Reset the clients property to force refresh
-        unset($this->clients);
-
-        // Force refresh the component
-        // $this->dispatch('$refresh');
-
-        // Show success message with client name
-        $clientName = $data['companyName'] ?? $data['clientName'];
-        $this->dispatch('toast', [
-            'type' => 'success',
-            'message' => "Client '{$data['clientName']}' added and selected successfully!",
-        ]);
-    }
-
-    #[On('close-quick-add-client')]
-    public function closeQuickAddClient()
-    {
-        $this->showQuickAddClient = false;
-    }
-
-    public function openQuickAddServiceType()
-    {
-        if (!$this->department_id) {
-            $this->dispatch('toast', type: 'warning', message: 'Please select a department first.');
-            return;
-        }
-
-        \Log::info('Opening Quick Add Service Type modal for department: ' . $this->department_id);
-        $this->showQuickAddServiceType = true;
-    }
-
-    #[On('refresh-service-types')]
-    public function refreshServiceTypes()
-    {
-        // Force refresh the service types property
-        $this->serviceTypes = null;
-        unset($this->serviceTypes);
-    }
-
-    #[On('service-type-created')]
-    public function serviceTypeCreated($data)
-    {
-        \Log::info('Service Type created event received', $data);
-
-        // Set the service_type_id
-        $this->service_type_id = $data['serviceTypeId'];
-
-        // Close modal
-        $this->showQuickAddServiceType = false;
-
-        // Reset the service types property to force refresh
-        unset($this->serviceTypes);
-
-        // Force refresh the component
-        $this->dispatch('$refresh');
-
-        // Show success message with service type name
-        $this->dispatch('toast', [
-            'type' => 'success',
-            'message' => "Service Type '{$data['serviceTypeName']}' added and selected successfully!",
-        ]);
-    }
-
-    #[On('close-quick-add-service-type')]
-    public function closeQuickAddServiceType()
-    {
-        \Log::info('Closing Quick Add Service Type modal');
-        $this->showQuickAddServiceType = false;
+        return Department::find($this->department_id);
     }
 
     // ==========================================
@@ -976,7 +1048,7 @@ class CreateFinanceTicket extends Component
             'costCenters' => $this->costCenters,
             'serviceTypes' => $this->serviceTypes,
             'uoms' => $this->uoms,
-            'departments' => $this->departments,
+            'departments' => $this->departments, // This should be a collection now
             'progressPercentage' => $this->progressPercentage,
         ])->layout('admin.layout');
     }

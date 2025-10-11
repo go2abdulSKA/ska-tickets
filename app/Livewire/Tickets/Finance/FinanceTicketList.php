@@ -1,213 +1,87 @@
 <?php
-// app/Livewire/Tickets/Finance/FinanceTicketList.php
 
 namespace App\Livewire\Tickets\Finance;
 
-use Livewire\Component;
-use Livewire\WithPagination;
-use Livewire\Attributes\On;
-use App\Models\TicketMaster;
-use App\Models\Department;
+use App\Enums\ClientType;
 use App\Enums\TicketStatus;
 use App\Enums\TicketType;
+use App\Models\Department;
+use App\Models\TicketMaster;
+use App\Services\ActivityLogService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
+use Livewire\Component;
+use Livewire\WithPagination;
 
 class FinanceTicketList extends Component
 {
     use WithPagination;
 
-    // ==========================================
-    // Properties
-    // ==========================================
-
-    // Search & Filters
+    // Filters
     public $search = '';
     public $statusFilter = '';
-    public $dateFrom = '';
-    public $dateTo = '';
     public $departmentFilter = '';
     public $clientTypeFilter = '';
-    public $perPage = 10;
+    public $dateFrom = '';
+    public $dateTo = '';
+    public $perPage = 25;
+
+    // OPTION C: My Drafts Toggle
+    public $showDraftsOnly = false;
 
     // Sorting
-    public $sortField = 'ticket_date';
+    public $sortField = 'created_at';
     public $sortDirection = 'desc';
 
-    // Selection for bulk actions
+    // Selection
     public $selectedItems = [];
     public $selectAll = false;
 
     // Modals
     public $showViewOffcanvas = false;
-    public $showDeleteModal = false;
-    public $showBulkDeleteModal = false;
-    public $showStatusModal = false;
-
     public $viewTicketId = null;
+    public $showDeleteModal = false;
     public $deleteTicketId = null;
-    public $statusTicketId = null;
-    public $statusAction = ''; // 'post', 'unpost', 'cancel'
-
     public $deleteTicketNo = '';
+    public $showBulkDeleteModal = false;
+    public $showCancelModal = false;
+    public $cancelTicketId = null;
+    public $cancelReason = '';
+    public $showUnpostModal = false;
+    public $unpostTicketId = null;
 
     protected $queryString = [
         'search' => ['except' => ''],
         'statusFilter' => ['except' => ''],
+        'departmentFilter' => ['except' => ''],
+        'clientTypeFilter' => ['except' => ''],
         'dateFrom' => ['except' => ''],
         'dateTo' => ['except' => ''],
-        'departmentFilter' => ['except' => ''],
+        'perPage' => ['except' => 25],
+        'showDraftsOnly' => ['except' => false],
     ];
 
-    protected $paginationTheme = 'bootstrap';
-
-    // ==========================================
-    // Lifecycle Hooks
-    // ==========================================
-
-    public function mount()
+    /**
+     * OPTION C: Toggle "My Drafts" filter
+     */
+    public function toggleMyDrafts()
     {
-        // Set default date range (current month)
-        if (!$this->dateFrom) {
-            $this->dateFrom = Carbon::now()->startOfMonth()->format('Y-m-d');
-        }
-        if (!$this->dateTo) {
-            $this->dateTo = Carbon::now()->endOfMonth()->format('Y-m-d');
-        }
-    }
-
-    public function updatedSearch()
-    {
+        $this->showDraftsOnly = !$this->showDraftsOnly;
         $this->resetPage();
     }
 
-    public function updatedStatusFilter()
+    /**
+     * Clear all filters
+     */
+    public function clearFilters()
     {
+        $this->reset(['search', 'statusFilter', 'departmentFilter', 'clientTypeFilter', 'dateFrom', 'dateTo', 'showDraftsOnly']);
         $this->resetPage();
     }
 
-    public function updatedDepartmentFilter()
-    {
-        $this->resetPage();
-    }
-
-    public function updatedDateFrom()
-    {
-        $this->resetPage();
-    }
-
-    public function updatedDateTo()
-    {
-        $this->resetPage();
-    }
-
-    public function updatedSelectAll($value)
-    {
-        if ($value) {
-            $this->selectedItems = $this->getTicketsProperty()->pluck('id')->map(fn($id) => (string) $id)->toArray();
-        } else {
-            $this->selectedItems = [];
-        }
-    }
-
-    // ==========================================
-    // Computed Properties
-    // ==========================================
-
-    public function getTicketsProperty()
-    {
-        $query = TicketMaster::query()
-            ->with(['department:id,department,prefix', 'client:id,client_name,company_name', 'costCenter:id,code,name', 'user:id,name', 'serviceType:id,service_type', 'transactions:id,ticket_id,description,qty,total_cost'])
-            ->where('ticket_type', TicketType::FINANCE);
-
-        // Apply search
-        if ($this->search) {
-            $query->where(function ($q) {
-                $q->where('ticket_no', 'like', "%{$this->search}%")
-                    ->orWhere('project_code', 'like', "%{$this->search}%")
-                    ->orWhere('ref_no', 'like', "%{$this->search}%")
-                    ->orWhere('contract_no', 'like', "%{$this->search}%")
-                    ->orWhereHas('client', function ($q) {
-                        $q->where('client_name', 'like', "%{$this->search}%")->orWhere('company_name', 'like', "%{$this->search}%");
-                    })
-                    ->orWhereHas('costCenter', function ($q) {
-                        $q->where('name', 'like', "%{$this->search}%")->orWhere('code', 'like', "%{$this->search}%");
-                    });
-            });
-        }
-
-        // Apply status filter
-        if ($this->statusFilter) {
-            $query->where('status', $this->statusFilter);
-        }
-
-        // Apply department filter
-        if ($this->departmentFilter) {
-            $query->where('department_id', $this->departmentFilter);
-        }
-
-        // Apply date range filter
-        if ($this->dateFrom && $this->dateTo) {
-            $query->whereBetween('ticket_date', [Carbon::parse($this->dateFrom)->startOfDay(), Carbon::parse($this->dateTo)->endOfDay()]);
-        }
-
-        // Apply client type filter
-        if ($this->clientTypeFilter) {
-            $query->where('client_type', $this->clientTypeFilter);
-        }
-
-        // User access control
-        $user = Auth::user();
-        if (!$user->isSuperAdmin()) {
-            $userDeptIds = $user->getDepartmentIds();
-            $query->whereIn('department_id', $userDeptIds);
-        }
-
-        // Apply sorting
-        $query->orderBy($this->sortField, $this->sortDirection);
-
-        return $query->paginate($this->perPage);
-    }
-
-    public function getStatsProperty()
-    {
-        $query = TicketMaster::where('ticket_type', TicketType::FINANCE);
-
-        // Apply date range to stats
-        if ($this->dateFrom && $this->dateTo) {
-            $query->whereBetween('ticket_date', [Carbon::parse($this->dateFrom)->startOfDay(), Carbon::parse($this->dateTo)->endOfDay()]);
-        }
-
-        // User access control
-        $user = Auth::user();
-        if (!$user->isSuperAdmin()) {
-            $query->whereIn('department_id', $user->getDepartmentIds());
-        }
-
-        return [
-            'total' => $query->count(),
-            'draft' => $query->clone()->where('status', TicketStatus::DRAFT)->count(),
-            'posted' => $query->clone()->where('status', TicketStatus::POSTED)->count(),
-            'cancelled' => $query->clone()->where('status', TicketStatus::CANCELLED)->count(),
-            'total_amount' => $query->clone()->where('status', TicketStatus::POSTED)->sum('total_amount'),
-        ];
-    }
-
-    public function getDepartmentsProperty()
-    {
-        $user = Auth::user();
-
-        if ($user->isSuperAdmin()) {
-            return Department::active()->get();
-        }
-
-        return Department::active()->whereIn('id', $user->getDepartmentIds())->get();
-    }
-
-    // ==========================================
-    // Actions
-    // ==========================================
-
+    /**
+     * Sort by field
+     */
     public function sortBy($field)
     {
         if ($this->sortField === $field) {
@@ -218,70 +92,117 @@ class FinanceTicketList extends Component
         }
     }
 
-    public function clearFilters()
+    /**
+     * Get tickets query
+     */
+    public function getTicketsProperty()
     {
-        $this->reset(['search', 'statusFilter', 'dateFrom', 'dateTo', 'departmentFilter', 'clientTypeFilter']);
+        $query = TicketMaster::query()
+            ->with(['department', 'user', 'client', 'costCenter', 'serviceType'])
+            ->where('ticket_type', TicketType::FINANCE);
 
-        // Reset to current month
-        $this->dateFrom = Carbon::now()->startOfMonth()->format('Y-m-d');
-        $this->dateTo = Carbon::now()->endOfMonth()->format('Y-m-d');
+        // OPTION C: My Drafts Filter
+        if ($this->showDraftsOnly) {
+            $query->where('status', TicketStatus::DRAFT)->where('user_id', Auth::id());
+        }
 
-        $this->resetPage();
+        // Department filter
+        if ($this->departmentFilter) {
+            $query->where('department_id', $this->departmentFilter);
+        } elseif (!Auth::user()->isSuperAdmin()) {
+            $query->whereIn('department_id', Auth::user()->getDepartmentIds());
+        }
+
+        // Status filter
+        if ($this->statusFilter) {
+            $query->where('status', $this->statusFilter);
+        }
+
+        // Client type filter
+        if ($this->clientTypeFilter) {
+            $query->where('client_type', $this->clientTypeFilter);
+        }
+
+        // Date range filter
+        if ($this->dateFrom) {
+            $query->where('ticket_date', '>=', $this->dateFrom);
+        }
+        if ($this->dateTo) {
+            $query->where('ticket_date', '<=', $this->dateTo);
+        }
+
+        // Search filter
+        if ($this->search) {
+            $query->where(function ($q) {
+                $q->where('ticket_no', 'like', "%{$this->search}%")
+                    ->orWhere('project_code', 'like', "%{$this->search}%")
+                    ->orWhere('ref_no', 'like', "%{$this->search}%")
+                    ->orWhereHas('client', function ($sq) {
+                        $sq->where('client_name', 'like', "%{$this->search}%")->orWhere('company_name', 'like', "%{$this->search}%");
+                    })
+                    ->orWhereHas('costCenter', function ($sq) {
+                        $sq->where('name', 'like', "%{$this->search}%")->orWhere('code', 'like', "%{$this->search}%");
+                    });
+            });
+        }
+
+        // Sorting
+        $query->orderBy($this->sortField, $this->sortDirection);
+
+        return $query->paginate($this->perPage);
     }
 
+    /**
+     * Get departments for filter
+     */
+    public function getDepartmentsProperty()
+    {
+        if (Auth::user()->isSuperAdmin()) {
+            return Department::active()->get();
+        }
+        return Auth::user()->departments;
+    }
+
+    /**
+     * Get statistics
+     */
+    public function getStatsProperty()
+    {
+        $query = TicketMaster::where('ticket_type', TicketType::FINANCE);
+
+        if (!Auth::user()->isSuperAdmin()) {
+            $query->whereIn('department_id', Auth::user()->getDepartmentIds());
+        }
+
+        return [
+            'total' => $query->count(),
+            'draft' => (clone $query)->where('status', TicketStatus::DRAFT)->count(),
+            'posted' => (clone $query)->where('status', TicketStatus::POSTED)->count(),
+            'total_amount' => (clone $query)->where('status', TicketStatus::POSTED)->sum('total_amount'),
+        ];
+    }
+
+    /**
+     * View ticket
+     */
     public function view($ticketId)
     {
         $this->viewTicketId = $ticketId;
         $this->showViewOffcanvas = true;
     }
 
-    public function closeViewOffcanvas()
-    {
-        $this->showViewOffcanvas = false;
-        $this->viewTicketId = null;
-    }
-
-    public function edit($ticketId)
-    {
-        return redirect()->route('tickets.finance.edit', $ticketId);
-    }
-
-    public function duplicate($ticketId)
-    {
-        return redirect()->route('tickets.finance.duplicate', $ticketId);
-    }
-
-    // public function confirmDelete($ticketId)
-    // {
-    //     $ticket = TicketMaster::find($ticketId);
-
-    //     if (!$ticket) {
-    //         $this->dispatch('toast', type: 'error', message: 'Ticket not found.');
-    //         return;
-    //     }
-
-    //     // Only draft tickets can be deleted
-    //     if (!$ticket->canDelete()) {
-    //         $this->dispatch('toast', type: 'error', message: 'Only draft tickets can be deleted.');
-    //         return;
-    //     }
-
-    //     $this->deleteTicketId = $ticketId;
-    //     $this->showDeleteModal = true;
-    // }
-
+    /**
+     * OPTION C: Confirm delete draft
+     */
     public function confirmDelete($ticketId)
     {
-        $ticket = TicketMaster::find($ticketId);
+        $ticket = TicketMaster::findOrFail($ticketId);
 
-        if (!$ticket) {
-            $this->dispatch('toast', type: 'error', message: 'Ticket not found.');
-            return;
-        }
-
-        // Only draft tickets can be deleted
         if (!$ticket->canDelete()) {
-            $this->dispatch('toast', type: 'error', message: 'Only draft tickets can be deleted.');
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Only draft tickets can be deleted.',
+            ]);
             return;
         }
 
@@ -290,73 +211,113 @@ class FinanceTicketList extends Component
         $this->showDeleteModal = true;
     }
 
+    /**
+     * OPTION C: Delete draft ticket
+     */
     public function delete()
     {
-        $ticket = TicketMaster::find($this->deleteTicketId);
-
-        if (!$ticket) {
-            $this->dispatch('toast', type: 'error', message: 'Ticket not found.');
-            $this->cancelDelete();
-            return;
-        }
-
-        if (!$ticket->canDelete()) {
-            $this->dispatch('toast', type: 'error', message: 'This ticket cannot be deleted.');
-            $this->cancelDelete();
-            return;
-        }
-
         try {
-            // Soft delete preserves sequence integrity
-            $ticket->delete();
+            $ticket = TicketMaster::findOrFail($this->deleteTicketId);
 
-            $this->dispatch('toast', type: 'success', message: 'Ticket deleted successfully!');
-            $this->cancelDelete();
+            if (!$ticket->canDelete()) {
+                throw new \Exception('Only draft tickets can be deleted.');
+            }
+
+            DB::transaction(function () use ($ticket) {
+                $ticketNo = $ticket->ticket_no;
+
+                // Log before deletion
+                $activityLog = app(ActivityLogService::class);
+                $activityLog->logDeleted($ticket, "Deleted draft ticket {$ticketNo}");
+
+                // Delete ticket (cascades to transactions and attachments)
+                $ticket->delete();
+            });
+
+            $this->showDeleteModal = false;
+            $this->reset(['deleteTicketId', 'deleteTicketNo']);
+
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => 'Draft ticket deleted successfully.',
+            ]);
         } catch (\Exception $e) {
-            \Log::error('Error deleting ticket: ' . $e->getMessage());
-            $this->dispatch('toast', type: 'error', message: 'Failed to delete ticket.');
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Error: ' . $e->getMessage(),
+            ]);
         }
     }
 
     public function cancelDelete()
     {
-        $this->deleteTicketId = null;
         $this->showDeleteModal = false;
+        $this->reset(['deleteTicketId', 'deleteTicketNo']);
     }
 
+    /**
+     * OPTION C: Confirm bulk delete (max 5 drafts)
+     */
     public function confirmBulkDelete()
     {
         if (empty($this->selectedItems)) {
-            $this->dispatch('toast', type: 'warning', message: 'No tickets selected.');
+            $this->dispatch('toast', [
+                'type' => 'warning',
+                'message' => 'Please select tickets to delete.',
+            ]);
             return;
         }
 
-        // Check if all selected tickets can be deleted
-        $tickets = TicketMaster::whereIn('id', $this->selectedItems)->get();
-        $cannotDelete = $tickets->filter(fn($t) => !$t->canDelete());
-
-        if ($cannotDelete->count() > 0) {
-            $this->dispatch('toast', type: 'error', message: 'Some tickets cannot be deleted (only drafts allowed).');
+        if (count($this->selectedItems) > 5) {
+            $this->dispatch('toast', [
+                'type' => 'warning',
+                'message' => 'Maximum 5 drafts can be deleted at once.',
+            ]);
             return;
         }
 
         $this->showBulkDeleteModal = true;
     }
 
+    /**
+     * OPTION C: Bulk delete drafts
+     */
     public function bulkDelete()
     {
         try {
-            TicketMaster::whereIn('id', $this->selectedItems)->delete();
+            $deleted = 0;
+            $failed = 0;
 
-            $count = count($this->selectedItems);
-            $this->selectedItems = [];
-            $this->selectAll = false;
+            foreach ($this->selectedItems as $ticketId) {
+                $ticket = TicketMaster::find($ticketId);
 
-            $this->dispatch('toast', type: 'success', message: "{$count} tickets deleted successfully!");
+                if ($ticket && $ticket->canDelete()) {
+                    $activityLog = app(ActivityLogService::class);
+                    $activityLog->logDeleted($ticket, "Bulk deleted draft ticket {$ticket->ticket_no}");
+                    $ticket->delete();
+                    $deleted++;
+                } else {
+                    $failed++;
+                }
+            }
+
             $this->showBulkDeleteModal = false;
+            $this->reset(['selectedItems', 'selectAll']);
+
+            $message = "Deleted {$deleted} draft ticket(s).";
+            if ($failed > 0) {
+                $message .= " {$failed} ticket(s) could not be deleted (not drafts).";
+            }
+
+            $this->dispatch('toast', [
+                'type' => 'success',
+                'message' => $message,
+            ]);
         } catch (\Exception $e) {
-            \Log::error('Bulk delete error: ' . $e->getMessage());
-            $this->dispatch('toast', type: 'error', message: 'Failed to delete tickets.');
+            $this->dispatch('toast', [
+                'type' => 'error',
+                'message' => 'Error during bulk delete: ' . $e->getMessage(),
+            ]);
         }
     }
 
@@ -365,68 +326,31 @@ class FinanceTicketList extends Component
         $this->showBulkDeleteModal = false;
     }
 
-    // Status management
-    public function confirmStatusChange($ticketId, $action)
-    {
-        $ticket = TicketMaster::find($ticketId);
-
-        if (!$ticket) {
-            $this->dispatch('toast', type: 'error', message: 'Ticket not found.');
-            return;
-        }
-
-        // Validate action permissions
-        if ($action === 'post' && !$ticket->canPost()) {
-            $this->dispatch('toast', type: 'error', message: 'This ticket cannot be posted.');
-            return;
-        }
-
-        if ($action === 'unpost' && !$ticket->canUnpost()) {
-            $this->dispatch('toast', type: 'error', message: 'Only admins can unpost tickets.');
-            return;
-        }
-
-        if ($action === 'cancel' && !$ticket->canCancel()) {
-            $this->dispatch('toast', type: 'error', message: 'This ticket cannot be cancelled.');
-            return;
-        }
-
-        $this->statusTicketId = $ticketId;
-        $this->statusAction = $action;
-        $this->showStatusModal = true;
-    }
-
+    /**
+     * Export functions (placeholders)
+     */
     public function exportExcel()
     {
-        // TODO: Implement Excel export
-        $this->dispatch('toast', type: 'info', message: 'Excel export coming soon!');
+        $this->dispatch('toast', [
+            'type' => 'info',
+            'message' => 'Excel export feature coming soon!',
+        ]);
     }
 
     public function exportPDF()
     {
-        // TODO: Implement PDF export
-        $this->dispatch('toast', type: 'info', message: 'PDF export coming soon!');
+        $this->dispatch('toast', [
+            'type' => 'info',
+            'message' => 'PDF export feature coming soon!',
+        ]);
     }
-
-    #[On('ticket-created')]
-    #[On('ticket-updated')]
-    #[On('ticket-deleted')]
-    public function refreshList()
-    {
-        // Force refresh pagination
-        $this->resetPage();
-    }
-
-    // ==========================================
-    // Render
-    // ==========================================
 
     public function render()
     {
         return view('livewire.tickets.finance.index', [
             'tickets' => $this->tickets,
-            'stats' => $this->stats,
             'departments' => $this->departments,
+            'stats' => $this->stats,
         ])->layout('admin.layout');
     }
 }

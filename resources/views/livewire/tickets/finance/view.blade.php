@@ -296,6 +296,12 @@
                     <div class="mb-2">
                         <strong>IP Address:</strong> {{ $ticket->host_name }}
                     </div>
+                    <div class="mb-2">
+                        <button type="button" class="btn btn-light btn-sm" wire:click="closeOffcanvas">
+                            <i class="mdi mdi-close me-1"></i> Close
+                        </button>
+                    </div>
+
                 </div>
 
             </div>

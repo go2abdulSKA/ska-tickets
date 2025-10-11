@@ -323,34 +323,79 @@ class TicketMaster extends Model
     /**
      * Check if ticket can be deleted
      */
+    // public function canDelete(): bool
+    // {
+    //     return $this->status->canDelete();
+    // }
+
+    /**
+     * OPTION C: Check if ticket can be deleted
+     * Only DRAFT tickets can be deleted
+     * Posted/Cancelled tickets cannot be deleted (only cancelled with reason)
+     */
     public function canDelete(): bool
     {
-        return $this->status->canDelete();
+        return $this->status === TicketStatus::DRAFT;
     }
+
+    /**
+     * OPTION C: Check if ticket can be cancelled
+     * Drafts can be cancelled by owner
+     * Posted tickets can only be cancelled by Admin/Super Admin
+     */
+    public function canCancel(): bool
+    {
+        // Already cancelled
+        if ($this->status === TicketStatus::CANCELLED) {
+            return false;
+        }
+
+        // Drafts can be cancelled by anyone with access
+        if ($this->status === TicketStatus::DRAFT) {
+            return true;
+        }
+
+        // Posted tickets can only be cancelled by Admin/Super Admin
+        if ($this->status === TicketStatus::POSTED) {
+            return Auth::user()->isAdmin() || Auth::user()->isSuperAdmin();
+        }
+
+        return false;
+    }
+
+    /**
+     * OPTION C: Check if ticket can be unposted
+     * Only Super Admins can unpost tickets (for emergency corrections)
+     */
+    public function canUnpost(): bool
+    {
+        return $this->status === TicketStatus::POSTED && Auth::user()->isSuperAdmin();
+    }
+
 
     /**
      * Check if ticket can be posted
      */
-    public function canPost(): bool
-    {
-        return $this->status->canPost();
-    }
+    // public function canPost(): bool
+    // {
+    //     return $this->status->canPost();
+    // }
 
     /**
      * Check if ticket can be unposted
      */
-    public function canUnpost(): bool
-    {
-        return $this->status->canUnpost();
-    }
+    // public function canUnpost(): bool
+    // {
+    //     return $this->status->canUnpost();
+    // }
 
     /**
      * Check if ticket can be cancelled
      */
-    public function canCancel(): bool
-    {
-        return $this->status->canCancel();
-    }
+    // public function canCancel(): bool
+    // {
+    //     return $this->status->canCancel();
+    // }
 
     /**
      * Check if this is a finance ticket
@@ -394,5 +439,33 @@ class TicketMaster extends Model
 
         // Update the ticket status
         $this->update(['status' => $newStatus]);
+    }
+
+    /**
+     * OPTION C: Check if this is a draft ticket (has DRAFT-xxx ID)
+     */
+    public function isDraftId(): bool
+    {
+        return str_starts_with($this->ticket_no, 'DRAFT-');
+    }
+
+    /**
+     * OPTION C: Check if this has a sequential number
+     */
+    public function hasSequentialNumber(): bool
+    {
+        return !$this->isDraftId();
+    }
+
+    /**
+     * OPTION C: Get display badge for ticket number
+     */
+    public function getTicketNoBadgeAttribute(): string
+    {
+        if ($this->isDraftId()) {
+            return '<span class="badge badge-soft-warning">' . $this->ticket_no . '</span>';
+        }
+
+        return '<span class="badge badge-soft-primary">' . $this->ticket_no . '</span>';
     }
 }

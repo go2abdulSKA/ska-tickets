@@ -4,6 +4,10 @@
 
 <div>
     
+
+    
+    
+
     <div class="mb-4 page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
             <h4 class="m-0 fs-xl fw-bold">
@@ -16,9 +20,28 @@
                 <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
             </h4>
             <p class="mb-0 text-muted">
-                <!--[if BLOCK]><![endif]--><?php if($previewTicketNumber): ?>
-                    Next Ticket Number: <span class="badge badge-soft-primary"><?php echo e($previewTicketNumber); ?></span>
+                
+                <!--[if BLOCK]><![endif]--><?php if(!$editMode && !$isDuplicate && $previewTicketNumber): ?>
+                    <span class="badge badge-soft-info">
+                        <i class="mdi mdi-information-outline me-1"></i>
+                        Next Sequential Number: <strong><?php echo e($previewTicketNumber); ?></strong>
+                    </span>
+                    <br>
+                    <small class="text-muted">
+                        * Draft tickets get DRAFT-xxx IDs. Sequential numbers assigned when posted.
+                    </small>
                 <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+
+                
+                <!--[if BLOCK]><![endif]--><?php if($editMode && isset($ticket)): ?>
+                    <!--[if BLOCK]><![endif]--><?php if(str_starts_with($ticket->ticket_no ?? '', 'DRAFT-')): ?>
+                        <span class="badge badge-soft-warning"><?php echo e($ticket->ticket_no); ?></span>
+                        <small class="text-muted">· Will get sequential number when posted</small>
+                    <?php else: ?>
+                        <span class="badge badge-soft-primary"><?php echo e($ticket->ticket_no ?? ''); ?></span>
+                    <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+                <?php endif; ?><!--[if ENDBLOCK]><![endif]-->
+
                 <!--[if BLOCK]><![endif]--><?php if($lastSaved): ?>
                     <span class="ms-2 text-muted small">
                         <i class="mdi mdi-content-save-outline"></i> Last saved: <?php echo e($lastSaved); ?>
@@ -33,6 +56,8 @@
             </a>
         </div>
     </div>
+
+    
 
     
     <div class="mb-3 card">

@@ -23,7 +23,9 @@
             id="department_id" @if ($editMode) disabled @endif>
             <option value="">-- Select Department --</option>
             @foreach ($departments as $dept)
-                <option value="{{ $dept->id }}">{{ $dept->department }} ({{ $dept->prefix }})</option>
+                <option value="{{ $dept->id }}">
+                    {{ $dept->department }} ({{ $dept->prefix }})
+                </option>
             @endforeach
         </select>
         @error('department_id')
@@ -267,8 +269,9 @@
     {{-- Reference No --}}
     <div class="col-md-4">
         <label for="ref_no" class="form-label">Reference No</label>
-        <input type="text" value='oldvalue' wire:model.blur="ref_no" class="form-control @error('ref_no') is-invalid @enderror"
-            id="ref_no" placeholder="e.g., PO-2025-001" maxlength="100">
+        {{-- <input type="text" value='oldvalue' wire:model.blur="ref_no" class="form-control @error('ref_no') is-invalid @enderror" --}}
+        <input type="text" wire:model.blur="ref_no" id="ref_no" placeholder="e.g., PO-2025-001"
+            maxlength="100">
         @error('ref_no')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror

@@ -5,7 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Livewire\Masters\User\UserList;
 use App\Livewire\Masters\Client\ClientList;
 use App\Livewire\Masters\Department\DepartmentList;
+use App\Livewire\Tickets\Finance\FinanceTicketList;
 use App\Livewire\Masters\CostCenters\CostCenterList;
+use App\Livewire\Tickets\Finance\CreateFinanceTicket;
 use App\Livewire\Masters\ServiceTypes\ServiceTypeList;
 
 Route::get('/', function () {
@@ -31,16 +33,32 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
 
     // Finance Tickets Routes
 
-    Route::prefix('tickets/finance')
-        ->name('tickets.finance.')
-        ->group(function () {
-            Route::get('/', \App\Livewire\Tickets\Finance\FinanceTicketList::class)->name('index');
-            Route::get('/create', \App\Livewire\Tickets\Finance\CreateFinanceTicket::class)->name('create');
-            Route::get('/{ticketId}/edit', \App\Livewire\Tickets\Finance\CreateFinanceTicket::class)->name('edit');
-            Route::get('/{ticketId}/duplicate', function ($ticketId) {
-                return app(\App\Livewire\Tickets\Finance\CreateFinanceTicket::class)->mount($ticketId, true);
-            })->name('duplicate');
-        });
+    Route::middleware(['auth'])->group(function () {
+        // Finance Tickets
+        Route::get('/tickets/finance', FinanceTicketList::class)->name('tickets.finance.index');
+        Route::get('/tickets/finance/create', CreateFinanceTicket::class)->name('tickets.finance.create');
+        Route::get('/tickets/finance/{ticketId}/edit', CreateFinanceTicket::class)->name('tickets.finance.edit');
+
+        Route::get('/tickets/finance/{ticketId}/duplicate', CreateFinanceTicket::class)->name('tickets.finance.duplicate');
+
+        // Route::get('/tickets/finance/{ticketId}/duplicate', function ($ticketId) {
+        //     return app(\App\Livewire\Tickets\Finance\CreateFinanceTicket::class, [
+        //         'ticketId' => $ticketId,
+        //         'duplicate' => true,
+        //     ]);
+        // })->name('tickets.finance.duplicate');
+    });
+
+    // Route::prefix('tickets/finance')
+    //     ->name('tickets.finance.')
+    //     ->group(function () {
+    //         Route::get('/', \App\Livewire\Tickets\Finance\FinanceTicketList::class)->name('index');
+    //         Route::get('/create', \App\Livewire\Tickets\Finance\CreateFinanceTicket::class)->name('create');
+    //         Route::get('/{ticketId}/edit', \App\Livewire\Tickets\Finance\CreateFinanceTicket::class)->name('edit');
+    //         Route::get('/{ticketId}/duplicate', function ($ticketId) {
+    //             return app(\App\Livewire\Tickets\Finance\CreateFinanceTicket::class)->mount($ticketId, true);
+    //         })->name('duplicate');
+    //     });
 
     // Route::prefix('tickets/finance')->name('tickets.finance.')->group(function () {
     //     Route::get('/', function () {

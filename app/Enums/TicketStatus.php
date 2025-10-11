@@ -36,7 +36,7 @@ enum TicketStatus: string
      */
     public function label(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => 'Draft',
             self::POSTED => 'Posted',
             self::CANCELLED => 'Cancelled',
@@ -50,10 +50,10 @@ enum TicketStatus: string
      */
     public function badgeClass(): string
     {
-        return match($this) {
-            self::DRAFT => 'bg-warning',      // Yellow badge
-            self::POSTED => 'bg-success',     // Green badge
-            self::CANCELLED => 'bg-danger',   // Red badge
+        return match ($this) {
+            self::DRAFT => 'bg-warning', // Yellow badge
+            self::POSTED => 'bg-success', // Green badge
+            self::CANCELLED => 'bg-danger', // Red badge
         };
     }
 
@@ -64,7 +64,7 @@ enum TicketStatus: string
      */
     public function iconClass(): string
     {
-        return match($this) {
+        return match ($this) {
             self::DRAFT => 'mdi mdi-file-edit-outline',
             self::POSTED => 'mdi mdi-check-circle',
             self::CANCELLED => 'mdi mdi-close-circle',
@@ -121,9 +121,13 @@ enum TicketStatus: string
      *
      * @return bool
      */
+
+    /**
+     * OPTION C: Check if status can be cancelled
+     */
     public function canCancel(): bool
     {
-        return $this !== self::CANCELLED;
+        return in_array($this, [self::DRAFT, self::POSTED]);
     }
 
     /**
@@ -152,7 +156,7 @@ enum TicketStatus: string
                 'badge_class' => $status->badgeClass(),
                 'icon_class' => $status->iconClass(),
             ],
-            self::cases()
+            self::cases(),
         );
     }
 

@@ -4,59 +4,7 @@
 
 <div>
     {{-- Page Header --}}
-
-    {{-- resources/views/livewire/tickets/finance/create.blade.php --}}
-    {{-- Find the page header section and update: --}}
-
     <div class="mb-4 page-title-head d-flex align-items-center">
-        <div class="flex-grow-1">
-            <h4 class="m-0 fs-xl fw-bold">
-                @if ($editMode)
-                    Edit Finance Ticket
-                @elseif($isDuplicate)
-                    Duplicate Finance Ticket
-                @else
-                    Create Finance Ticket
-                @endif
-            </h4>
-            <p class="mb-0 text-muted">
-                {{-- OPTION C: Show preview number for NEW tickets only --}}
-                @if (!$editMode && !$isDuplicate && $previewTicketNumber)
-                    <span class="badge badge-soft-info">
-                        <i class="mdi mdi-information-outline me-1"></i>
-                        Next Sequential Number: <strong>{{ $previewTicketNumber }}</strong>
-                    </span>
-                    <br>
-                    <small class="text-muted">
-                        * Draft tickets get DRAFT-xxx IDs. Sequential numbers assigned when posted.
-                    </small>
-                @endif
-
-                {{-- Show ticket number for edit mode --}}
-                @if ($editMode && isset($ticket))
-                    @if (str_starts_with($ticket->ticket_no ?? '', 'DRAFT-'))
-                        <span class="badge badge-soft-warning">{{ $ticket->ticket_no }}</span>
-                        <small class="text-muted">· Will get sequential number when posted</small>
-                    @else
-                        <span class="badge badge-soft-primary">{{ $ticket->ticket_no ?? '' }}</span>
-                    @endif
-                @endif
-
-                @if ($lastSaved)
-                    <span class="ms-2 text-muted small">
-                        <i class="mdi mdi-content-save-outline"></i> Last saved: {{ $lastSaved }}
-                    </span>
-                @endif
-            </p>
-        </div>
-        <div>
-            <a href="{{ route('tickets.finance.index') }}" class="btn btn-light">
-                <i class="mdi mdi-arrow-left me-1"></i> Back to List
-            </a>
-        </div>
-    </div>
-
-    {{-- <div class="mb-4 page-title-head d-flex align-items-center">
         <div class="flex-grow-1">
             <h4 class="m-0 fs-xl fw-bold">
                 @if ($editMode)
@@ -83,7 +31,7 @@
                 <i class="mdi mdi-arrow-left me-1"></i> Back to List
             </a>
         </div>
-    </div> --}}
+    </div>
 
     {{-- Progress Bar --}}
     <div class="mb-3 card">

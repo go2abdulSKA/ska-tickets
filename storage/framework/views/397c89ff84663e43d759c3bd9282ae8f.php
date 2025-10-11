@@ -44,7 +44,9 @@ unset($__errorArgs, $__bag); ?>"
             id="department_id" <?php if($editMode): ?> disabled <?php endif; ?>>
             <option value="">-- Select Department --</option>
             <!--[if BLOCK]><![endif]--><?php $__currentLoopData = $departments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $dept): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
-                <option value="<?php echo e($dept->id); ?>"><?php echo e($dept->department); ?> (<?php echo e($dept->prefix); ?>)</option>
+                <option value="<?php echo e($dept->id); ?>">
+                    <?php echo e($dept->department); ?> (<?php echo e($dept->prefix); ?>)
+                </option>
             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><!--[if ENDBLOCK]><![endif]-->
         </select>
         <!--[if BLOCK]><![endif]--><?php $__errorArgs = ['department_id'];
@@ -450,15 +452,9 @@ unset($__errorArgs, $__bag); ?><!--[if ENDBLOCK]><![endif]-->
     
     <div class="col-md-4">
         <label for="ref_no" class="form-label">Reference No</label>
-        <input type="text" value='oldvalue' wire:model.blur="ref_no" class="form-control <?php $__errorArgs = ['ref_no'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>"
-            id="ref_no" placeholder="e.g., PO-2025-001" maxlength="100">
+        
+        <input type="text" wire:model.blur="ref_no" id="ref_no" placeholder="e.g., PO-2025-001"
+            maxlength="100">
         <!--[if BLOCK]><![endif]--><?php $__errorArgs = ['ref_no'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
